@@ -1,31 +1,24 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
-
-// This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
+import type * as Plugin from '@docusaurus/types/src/plugin';
 
 const config: Config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
+  title: 'Giselle Docs',
+  tagline: 'Developer documentation for the @alexrebula/giselle-* packages',
   favicon: 'img/favicon.ico',
 
-  // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: true,
   },
 
-  // Set the production url of your site here
-  url: 'https://your-docusaurus-site.example.com',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
+  url: 'https://giselle-docs.vercel.app',
   baseUrl: '/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'AlexRebula',
+  projectName: 'giselle-docs',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -39,32 +32,47 @@ const config: Config = {
     [
       'classic',
       {
-        docs: {
-          sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-        },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        // Disable the default docs plugin — we use multi-instance below
+        docs: false,
+        // Disable the blog — not needed for package docs
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
       } satisfies Preset.Options,
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'giselle-mui',
+        path: '../giselle-mui/docs',
+        routeBasePath: 'giselle-mui',
+        sidebarPath: './sidebars.ts',
+        editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
+      } satisfies Plugin.PluginOptions,
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'giselle-sections-sdk',
+        path: '../giselle-sections-sdk/docs',
+        routeBasePath: 'giselle-sections-sdk',
+        sidebarPath: './sidebars.ts',
+        editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
+      } satisfies Plugin.PluginOptions,
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'giselle-ui',
+        path: '../giselle-ui/docs',
+        routeBasePath: 'giselle-ui',
+        sidebarPath: './sidebars.ts',
+        editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
+      } satisfies Plugin.PluginOptions,
     ],
   ],
 
@@ -75,21 +83,35 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'My Site',
+      title: 'Giselle Docs',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'Giselle Docs',
         src: 'img/logo.svg',
       },
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'defaultSidebar',
+          docsPluginId: 'giselle-mui',
           position: 'left',
-          label: 'Tutorial',
+          label: 'giselle-mui',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/facebook/docusaurus',
+          type: 'docSidebar',
+          sidebarId: 'defaultSidebar',
+          docsPluginId: 'giselle-sections-sdk',
+          position: 'left',
+          label: 'giselle-sections-sdk',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'defaultSidebar',
+          docsPluginId: 'giselle-ui',
+          position: 'left',
+          label: 'giselle-ui',
+        },
+        {
+          href: 'https://github.com/AlexRebula/giselle-docs',
           label: 'GitHub',
           position: 'right',
         },
@@ -99,29 +121,18 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Packages',
           items: [
-            {
-              label: 'Tutorial',
-              to: '/docs/intro',
-            },
+            { label: 'giselle-mui', to: '/giselle-mui/' },
+            { label: 'giselle-sections-sdk', to: '/giselle-sections-sdk/' },
+            { label: 'giselle-ui', to: '/giselle-ui/' },
           ],
         },
         {
-          title: 'Community',
+          title: 'Links',
           items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
-            },
+            { label: 'npm — giselle-mui', href: 'https://www.npmjs.com/package/@alexrebula/giselle-mui' },
+            { label: 'GitHub', href: 'https://github.com/AlexRebula' },
           ],
         },
         {
