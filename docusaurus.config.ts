@@ -48,7 +48,9 @@ const config: Config = {
       '@docusaurus/plugin-content-docs',
       {
         id: 'giselle-mui',
-        path: '../giselle-mui/docs',
+        path: '../giselle-mui',
+        include: ['README.md', 'docs/**/*.md', 'docs/**/*.mdx'],
+        exclude: ['docs/README.md'],
         routeBasePath: 'giselle-mui',
         sidebarPath: './sidebars.ts',
         editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
@@ -58,7 +60,9 @@ const config: Config = {
       '@docusaurus/plugin-content-docs',
       {
         id: 'giselle-sections-sdk',
-        path: '../giselle-sections-sdk/docs',
+        path: '../giselle-sections-sdk',
+        include: ['README.md', 'docs/**/*.md', 'docs/**/*.mdx'],
+        exclude: ['docs/README.md'],
         routeBasePath: 'giselle-sections-sdk',
         sidebarPath: './sidebars.ts',
         editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
@@ -68,7 +72,9 @@ const config: Config = {
       '@docusaurus/plugin-content-docs',
       {
         id: 'giselle-ui',
-        path: '../giselle-ui/docs',
+        path: '../giselle-ui',
+        include: ['README.md', 'docs/**/*.md', 'docs/**/*.mdx'],
+        exclude: ['docs/README.md'],
         routeBasePath: 'giselle-ui',
         sidebarPath: './sidebars.ts',
         editUrl: 'https://github.com/AlexRebula/giselle-docs/edit/main/',
@@ -138,18 +144,12 @@ const config: Config = {
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
+            { label: 'Portfolio', href: 'https://alexrebula.com' },
+            { label: 'GitHub — AlexRebula', href: 'https://github.com/AlexRebula' },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Alex Rebula. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
