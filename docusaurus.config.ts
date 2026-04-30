@@ -100,21 +100,21 @@ const config: Config = {
           sidebarId: 'defaultSidebar',
           docsPluginId: 'giselle-mui',
           position: 'left',
-          label: 'giselle-mui',
+          label: 'Giselle MUI',
         },
         {
           type: 'docSidebar',
           sidebarId: 'defaultSidebar',
           docsPluginId: 'giselle-sections-sdk',
           position: 'left',
-          label: 'giselle-sections-sdk',
+          label: 'Giselle Sections SDK',
         },
         {
           type: 'docSidebar',
           sidebarId: 'defaultSidebar',
           docsPluginId: 'giselle-ui',
           position: 'left',
-          label: 'giselle-ui',
+          label: 'Giselle UI',
         },
         {
           href: 'https://github.com/AlexRebula/giselle-docs',
@@ -129,9 +129,9 @@ const config: Config = {
         {
           title: 'Packages',
           items: [
-            { label: 'giselle-mui', to: '/giselle-mui/' },
-            { label: 'giselle-sections-sdk', to: '/giselle-sections-sdk/' },
-            { label: 'giselle-ui', to: '/giselle-ui/' },
+            { label: 'Giselle MUI', to: '/giselle-mui/' },
+            { label: 'Giselle Sections SDK', to: '/giselle-sections-sdk/' },
+            { label: 'Giselle UI', to: '/giselle-ui/' },
           ],
         },
         {
