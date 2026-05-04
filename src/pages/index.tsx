@@ -72,6 +72,14 @@ export default function Home(): ReactNode {
           </Heading>
           <p className="hero__subtitle">{siteConfig.tagline}</p>
         </div>
+        {/* WC-6 placeholder — replace with the generated watercolour illustration once available.
+            WC-6 is a wide hero (2560×1024px) showing the full Philippine mango tree with
+            per-package label badges on each fruit. See alexrebula/docs/brand/logo-concept.md Track A. */}
+        <div className={styles.heroIllustrationPlaceholder} aria-hidden="true">
+          <span className={styles.heroIllustrationLabel}>
+            🎨 WC-6 — watercolour mango tree hero · pending Firefly generation
+          </span>
+        </div>
       </header>
       <main>
         <section className={styles.packages}>
