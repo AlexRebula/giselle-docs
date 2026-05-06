@@ -5,6 +5,7 @@ import type { TimelinePhase } from '@alexrebula/giselle-mui';
 
 interface RoadmapTimelineProps {
   phases: TimelinePhase[];
+  sortOrder?: 'asc' | 'desc';
 }
 
 /**
@@ -15,7 +16,7 @@ interface RoadmapTimelineProps {
  * MUI v7 CSS vars context requires a real DOM and React tree, which isn't
  * available server-side.
  */
-export function RoadmapTimeline({ phases }: RoadmapTimelineProps) {
+export function RoadmapTimeline({ phases, sortOrder = 'asc' }: RoadmapTimelineProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function RoadmapTimeline({ phases }: RoadmapTimelineProps) {
 
   return (
     <CssVarsProvider theme={giselleTheme}>
-      <TimelineTwoColumn phases={phases} />
+      <TimelineTwoColumn phases={phases} sortOrder={sortOrder} />
     </CssVarsProvider>
   );
 }

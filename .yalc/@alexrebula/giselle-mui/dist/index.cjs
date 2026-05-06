@@ -1524,7 +1524,7 @@ function CardDetailBullets({
           children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             GiselleIcon,
             {
-              icon: isDoneTask ? "solar:check-circle-bold" : "solar:circle-line-duotone",
+              icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
               width: PHASE_TASK_ICON_SIZE
             }
           )
@@ -2506,7 +2506,7 @@ function MilestoneBadge({
                 children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                   GiselleIcon,
                   {
-                    icon: isDoneTask ? "solar:check-circle-bold" : "solar:circle-line-duotone",
+                    icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
                     width: MILESTONE_TASK_ICON_SIZE
                   }
                 )
