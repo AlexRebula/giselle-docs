@@ -1107,6 +1107,7 @@ type PhaseCardProps = Omit<BoxProps, 'children'> & {
      */
     onToggleTask?: (taskIndex: number, done: boolean) => void;
 };
+
 /**
  * Expandable card for a single timeline phase.
  *

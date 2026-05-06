@@ -495,11 +495,7 @@ function StatCard({
 }
 
 // src/components/timeline/two-column/phase-card/phase-card.tsx
-import {
-  useState as useState2,
-  useRef,
-  useCallback as useCallback2
-} from "react";
+import { useState as useState2, useRef, useCallback as useCallback2 } from "react";
 
 // src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
 import { useState, useCallback, useMemo, useEffect } from "react";
@@ -1209,6 +1205,50 @@ var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx7(
   }
 );
 
+// src/components/timeline/two-column/phase-card/utils.ts
+function resolveCornerBadgeAlign(columnSide) {
+  if (columnSide === "left") {
+    return { left: 0, transform: "translate(-50%, -50%)", tooltipPlacement: "top-start" };
+  }
+  return { right: 0, transform: "translate(50%, -50%)", tooltipPlacement: "top-end" };
+}
+function resolvePhotoSources(phase) {
+  return phase.photos ?? (phase.photo ? [phase.photo] : null);
+}
+function isHighlightedVariant(variant) {
+  return variant === "scenario" || variant === "life-event";
+}
+function resolveTaskChildren(phase) {
+  if (phase.children?.length) return phase.children;
+  if (phase.details?.length) return phase.details.map((title) => ({ title }));
+  return [];
+}
+function buildCardClickHandler(hasDetails, toggle) {
+  return () => {
+    if (hasDetails) toggle();
+  };
+}
+function buildCardKeyDownHandler(hasDetails, toggle) {
+  return (e) => {
+    if (hasDetails && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      toggle();
+    }
+  };
+}
+function resolveCardExpansion(onRequestExpand, isExpanded, internalExpanded, setInternalExpanded) {
+  if (onRequestExpand === void 0) {
+    return { expanded: internalExpanded, toggle: () => setInternalExpanded((v) => !v) };
+  }
+  return { expanded: isExpanded ?? false, toggle: onRequestExpand };
+}
+function derivePlatformEntry(p) {
+  const isString = typeof p === "string";
+  const label = isString ? p : p.label;
+  const icon = isString ? null : p.icon;
+  return { label, icon, hasTextFallback: isString };
+}
+
 // src/components/timeline/two-column/animations.ts
 import { keyframes } from "@emotion/react";
 var pulseRing = keyframes`
@@ -1416,6 +1456,71 @@ var taskToggleColorSx = (isDone) => ({
 var taskIconColorSx = (isDone) => ({
   color: isDone ? "success.main" : "text.disabled"
 });
+function buildPaperSx(p) {
+  return (theme) => ({
+    p: 2.5,
+    position: "relative",
+    overflow: "hidden",
+    textAlign: p.textAlign ?? "left",
+    bgcolor: `rgba(${theme.vars.palette.grey["500Channel"]} / 0.08)`,
+    transition: p.hasDetails ? "box-shadow 0.2s, opacity 0.3s, filter 0.3s" : "opacity 0.3s, filter 0.3s",
+    ...p.hasDetails && {
+      cursor: "pointer",
+      "&:hover": {
+        boxShadow: `0 16px 40px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`
+      },
+      "&:focus-visible": {
+        outline: "2px solid",
+        outlineColor: theme.vars.palette[p.color ?? "primary"]?.main ?? theme.vars.palette.primary.main,
+        outlineOffset: 3
+      }
+    },
+    ...p.isDone && {
+      opacity: 0.45,
+      filter: "grayscale(1)",
+      "&:hover": {
+        opacity: 1,
+        filter: "none",
+        ...p.hasDetails && {
+          boxShadow: `0 16px 40px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`
+        }
+      }
+    },
+    ...p.phaseSide === "left" && !p.isHighlighted && {
+      bgcolor: "background.paper",
+      borderTop: "3px solid",
+      borderColor: `${p.color ?? "primary"}.main`,
+      boxShadow: `0 8px 24px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.12)`
+    },
+    ...p.isHighlighted && {
+      borderLeft: "4px solid",
+      borderColor: `${p.color}.main`,
+      bgcolor: `rgba(${theme.vars.palette[p.color]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / ${p.isScenario ? 0.1 : 0.08})`
+    },
+    ...p.isOverdue && !p.isDone && {
+      border: "2px solid",
+      borderColor: "error.main",
+      boxShadow: `0 0 0 2px rgba(${theme.vars.palette.error.mainChannel} / 0.2), 0 8px 32px rgba(${theme.vars.palette.error.mainChannel} / 0.18)`
+    },
+    ...p.suppressElevation && { boxShadow: "none" }
+  });
+}
+function buildDateTypographySx({
+  isScenario,
+  isHighlighted,
+  hideDecoration,
+  color
+}) {
+  return {
+    display: "block",
+    mb: 1.5,
+    pr: !isHighlighted && !hideDecoration ? 6 : 0,
+    fontSize: isScenario ? "0.875rem" : "0.8rem",
+    fontWeight: isScenario ? 800 : void 0,
+    letterSpacing: isScenario ? 0 : void 0,
+    color: isScenario ? `${color ?? "primary"}.main` : "text.disabled"
+  };
+}
 
 // src/components/timeline/two-column/phase-card/phase-card.tsx
 import { Fragment, jsx as jsx8, jsxs as jsxs6 } from "react/jsx-runtime";
@@ -1427,15 +1532,6 @@ var EYE_BUTTON_MIN_SIZE = 28;
 var PHASE_PILL_ICON_SIZE = 16;
 var PHASE_PILL_TEXT_FONT_SIZE = "0.75rem";
 var PHASE_TASK_ICON_SIZE = 16;
-function resolveCornerBadgeAlign(columnSide) {
-  if (columnSide === "left") {
-    return { left: 0, transform: "translate(-50%, -50%)", tooltipPlacement: "top-start" };
-  }
-  return { right: 0, transform: "translate(50%, -50%)", tooltipPlacement: "top-end" };
-}
-function resolvePhotoSources(phase) {
-  return phase.photos ?? (phase.photo ? [phase.photo] : null);
-}
 function LabeledIconStrip({ label, children }) {
   return /* @__PURE__ */ jsxs6(Box6, { sx: { mt: 2.5 }, children: [
     label && /* @__PURE__ */ jsx8(Typography5, { variant: "overline", sx: labeledIconStripLabelSx, children: label }),
@@ -1507,7 +1603,7 @@ function CardCornerAlertBadge({
     {
       ref: innerRef,
       role: onClick ? "button" : void 0,
-      "aria-label": `${alerts.length} issue${alerts.length !== 1 ? "s" : ""}`,
+      "aria-label": `${alerts.length} issue${alerts.length === 1 ? "" : "s"}`,
       tabIndex: 0,
       onClick,
       onKeyDown: onClick ? (e) => {
@@ -1517,7 +1613,7 @@ function CardCornerAlertBadge({
         }
       } : void 0,
       sx: cornerBadgeCircleSx({
-        positionOverride: left !== void 0 ? { left } : { right },
+        positionOverride: left === void 0 ? { right } : { left },
         transform,
         hasError,
         hasClickHandler: !!onClick,
@@ -1551,22 +1647,9 @@ function CardCornerAlertBadge({
 function ScenarioBadge({ color, scenarioLabel }) {
   return /* @__PURE__ */ jsx8(Typography5, { variant: "overline", sx: scenarioBadgeSx(color), children: scenarioLabel });
 }
-function CardStatusBadge({
-  isActive,
-  isDone,
-  activeLabel: _activeLabel,
-  color,
-  isScenario,
-  scenarioLabel,
-  isNew: _isNew
-}) {
-  const showActive = isActive && !isDone;
-  const showScenario = !showActive && isScenario && Boolean(scenarioLabel);
-  if (!showScenario) return null;
-  return /* @__PURE__ */ jsx8(Box6, { sx: { display: "flex", flexDirection: "column", alignItems: "flex-start" }, children: showScenario && /* @__PURE__ */ jsx8(ScenarioBadge, { color, scenarioLabel }) });
-}
-function isHighlightedVariant(variant) {
-  return variant === "scenario" || variant === "life-event";
+function CardStatusBadge({ color, isScenario, scenarioLabel }) {
+  if (!isScenario || !scenarioLabel) return null;
+  return /* @__PURE__ */ jsx8(ScenarioBadge, { color, scenarioLabel });
 }
 function CardDecoration({ color, isOverduePending, icon }) {
   return /* @__PURE__ */ jsxs6(Fragment, { children: [
@@ -1592,104 +1675,6 @@ function CardDecoration({ color, isOverduePending, icon }) {
     ),
     /* @__PURE__ */ jsx8(Box6, { "aria-hidden": "true", sx: phaseCardIconBoxSx(color, isOverduePending), children: icon })
   ] });
-}
-function buildPaperSx(p) {
-  return (theme) => ({
-    p: 2.5,
-    position: "relative",
-    overflow: "hidden",
-    textAlign: p.textAlign ?? "left",
-    bgcolor: `rgba(${theme.vars.palette.grey["500Channel"]} / 0.08)`,
-    // Single composed transition — covers opacity/filter (always) + box-shadow (when interactive).
-    transition: p.hasDetails ? "box-shadow 0.2s, opacity 0.3s, filter 0.3s" : "opacity 0.3s, filter 0.3s",
-    ...p.hasDetails && {
-      cursor: "pointer",
-      "&:hover": {
-        boxShadow: `0 16px 40px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`
-      },
-      "&:focus-visible": {
-        outline: "2px solid",
-        outlineColor: theme.vars.palette[p.color ?? "primary"]?.main ?? theme.vars.palette.primary.main,
-        outlineOffset: 3
-      }
-    },
-    ...p.isDone && {
-      opacity: 0.45,
-      filter: "grayscale(1)",
-      "&:hover": {
-        opacity: 1,
-        filter: "none",
-        ...p.hasDetails && {
-          boxShadow: `0 16px 40px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`
-        }
-      }
-    },
-    ...p.phaseSide === "left" && !p.isHighlighted && {
-      bgcolor: "background.paper",
-      borderTop: "3px solid",
-      borderColor: `${p.color ?? "primary"}.main`,
-      boxShadow: `0 8px 24px rgba(${theme.vars.palette[p.color ?? "primary"]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.12)`
-    },
-    ...p.isHighlighted && {
-      borderLeft: "4px solid",
-      borderColor: `${p.color}.main`,
-      bgcolor: `rgba(${theme.vars.palette[p.color]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / ${p.isScenario ? 0.1 : 0.08})`
-    },
-    // Overdue last — always overrides side/highlighted borders when active
-    ...p.isOverdue && !p.isDone && {
-      border: "2px solid",
-      borderColor: "error.main",
-      boxShadow: `0 0 0 2px rgba(${theme.vars.palette.error.mainChannel} / 0.2), 0 8px 32px rgba(${theme.vars.palette.error.mainChannel} / 0.18)`
-    },
-    // Flatten elevation on all sibling cards when another is expanded
-    ...p.suppressElevation && { boxShadow: "none" }
-  });
-}
-function resolveTaskChildren(phase) {
-  if (phase.children?.length) return phase.children;
-  if (phase.details?.length) return phase.details.map((title) => ({ title }));
-  return [];
-}
-function buildCardClickHandler(hasDetails, toggle) {
-  return () => {
-    if (hasDetails) toggle();
-  };
-}
-function buildCardKeyDownHandler(hasDetails, toggle) {
-  return (e) => {
-    if (hasDetails && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      toggle();
-    }
-  };
-}
-function resolveCardExpansion(onRequestExpand, isExpanded, internalExpanded, setInternalExpanded) {
-  if (onRequestExpand === void 0) {
-    return { expanded: internalExpanded, toggle: () => setInternalExpanded((v) => !v) };
-  }
-  return { expanded: isExpanded ?? false, toggle: onRequestExpand };
-}
-function buildDateTypographySx({
-  isScenario,
-  isHighlighted,
-  hideDecoration,
-  color
-}) {
-  return {
-    display: "block",
-    mb: 1.5,
-    pr: !isHighlighted && !hideDecoration ? 6 : 0,
-    fontSize: isScenario ? "0.875rem" : "0.8rem",
-    fontWeight: isScenario ? 800 : void 0,
-    letterSpacing: isScenario ? 0 : void 0,
-    color: isScenario ? `${color ?? "primary"}.main` : "text.disabled"
-  };
-}
-function derivePlatformEntry(p) {
-  const isString = typeof p === "string";
-  const label = isString ? p : p.label;
-  const icon = isString ? null : p.icon;
-  return { label, icon, hasTextFallback: isString };
 }
 function buildPlatformStripItems(platforms) {
   return platforms.map((p, i) => {
@@ -1809,13 +1794,9 @@ function PhaseCard({
           /* @__PURE__ */ jsx8(
             CardStatusBadge,
             {
-              isActive: Boolean(phase.active),
-              isDone,
-              activeLabel: phase.activeLabel,
               color: phase.color ?? "primary",
               isScenario,
-              scenarioLabel: phase.scenarioLabel,
-              isNew: Boolean(phase.new)
+              scenarioLabel: phase.scenarioLabel
             }
           ),
           !phase.hideDate && phase.date && /* @__PURE__ */ jsx8(
@@ -2339,11 +2320,11 @@ function MilestoneBadge({
         ] }),
         m.date && /* @__PURE__ */ jsx10(Typography6, { variant: "caption", sx: milestoneDateSx(MILESTONE_DATE_FONT_SIZE), children: m.date }),
         /* @__PURE__ */ jsxs7(Box8, { sx: milestoneTitleRowSx(rightAlign), children: [
-          onMarkViewed && rightAlign && /* @__PURE__ */ jsx10(
+          onMarkViewed && /* @__PURE__ */ jsx10(
             Tooltip2,
             {
               title: isViewed ? "Mark as not viewed" : "Mark as viewed",
-              placement: "right",
+              placement: rightAlign ? "right" : "left",
               arrow: true,
               children: /* @__PURE__ */ jsx10(
                 Box8,
@@ -2372,40 +2353,7 @@ function MilestoneBadge({
               )
             }
           ),
-          /* @__PURE__ */ jsx10(Typography6, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle }),
-          onMarkViewed && !rightAlign && /* @__PURE__ */ jsx10(
-            Tooltip2,
-            {
-              title: isViewed ? "Mark as not viewed" : "Mark as viewed",
-              placement: "left",
-              arrow: true,
-              children: /* @__PURE__ */ jsx10(
-                Box8,
-                {
-                  component: "button",
-                  type: "button",
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    onMarkViewed();
-                  },
-                  "aria-label": isViewed ? "Mark as not viewed" : "Mark as viewed",
-                  "aria-pressed": isViewed,
-                  sx: milestoneEyeButtonSx({
-                    isViewed: !!isViewed,
-                    minSize: MILESTONE_EYE_BUTTON_MIN_SIZE
-                  }),
-                  children: /* @__PURE__ */ jsx10(
-                    GiselleIcon,
-                    {
-                      icon: isViewed ? "solar:eye-bold" : "solar:eye-outline",
-                      width: MILESTONE_EYE_ICON_SIZE,
-                      "aria-hidden": true
-                    }
-                  )
-                }
-              )
-            }
-          )
+          /* @__PURE__ */ jsx10(Typography6, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle })
         ] }),
         (isExpanded || isHovered) && m.description && /* @__PURE__ */ jsx10(Typography6, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: m.description }),
         hasDetails && /* @__PURE__ */ jsxs7(
