@@ -2,7 +2,7 @@ import * as _mui_material_styles from '@mui/material/styles';
 import { SxProps, Theme } from '@mui/material/styles';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { IconProps } from '@iconify/react';
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { BoxProps } from '@mui/material/Box';
 import { PaperProps } from '@mui/material/Paper';
 import { ButtonBaseProps } from '@mui/material/ButtonBase';
@@ -298,6 +298,7 @@ interface GiselleIconProps {
      */
     rotate?: IconProps['rotate'];
 }
+
 /**
  * GiselleIcon — zero-dependency icon component with MUI `sx` support.
  *
@@ -357,6 +358,25 @@ interface MetricCardProps extends PaperProps {
      */
     decoration?: ReactNode;
 }
+interface MetricCardDecorationProps extends BoxProps {
+    /**
+     * Palette color used for the gradient fill.
+     * @default 'primary'
+     */
+    color?: MetricCardColor;
+}
+
+/**
+ * MetricCardDecoration — the rotated gradient rectangle that sits behind MetricCard content.
+ *
+ * Pass as the `decoration` prop of `MetricCard`. The card clips it via `overflow: hidden`.
+ *
+ * @example
+ * import { MetricCard, MetricCardDecoration } from '@alexrebula/giselle-mui';
+ * <MetricCard decoration={<MetricCardDecoration color="primary" />} ... />
+ */
+declare function MetricCardDecoration({ color, sx, ...other }: MetricCardDecorationProps): react_jsx_runtime.JSX.Element;
+
 /**
  * MetricCard — compact stat card with a large value, label, icon slot, and decoration slot.
  *
@@ -376,23 +396,6 @@ interface MetricCardProps extends PaperProps {
  * />
  */
 declare function MetricCard({ value, label, sublabel, icon, color, decoration, elevation, sx, ...other }: MetricCardProps): react_jsx_runtime.JSX.Element;
-interface MetricCardDecorationProps extends BoxProps {
-    /**
-     * Palette color used for the gradient fill.
-     * @default 'primary'
-     */
-    color?: MetricCardColor;
-}
-/**
- * MetricCardDecoration — the rotated gradient rectangle that sits behind MetricCard content.
- *
- * Pass as the `decoration` prop of `MetricCard`. The card clips it via `overflow: hidden`.
- *
- * @example
- * import { MetricCard, MetricCardDecoration } from '@alexrebula/giselle-mui';
- * <MetricCard decoration={<MetricCardDecoration color="primary" />} ... />
- */
-declare function MetricCardDecoration({ color, sx, ...other }: MetricCardDecorationProps): react_jsx_runtime.JSX.Element;
 
 interface SelectableCardProps extends ButtonBaseProps {
     /**
@@ -402,6 +405,7 @@ interface SelectableCardProps extends ButtonBaseProps {
      */
     selected?: boolean;
 }
+
 /**
  * SelectableCard — an accessible, clickable card surface.
  *
@@ -455,6 +459,7 @@ interface QuoteCardProps extends PaperProps {
      */
     color?: QuoteColor;
 }
+
 /**
  * A warm, readable block-quote card built on MUI Paper.
  *
@@ -1154,6 +1159,7 @@ type TimelineDotComponentProps = Omit<BoxProps, 'color' | 'onClick'> & {
     /** Makes the dot clickable. Omit for decorative (read-only) dots. */
     onClick?: () => void;
 };
+
 /**
  * Unified dot circle for the timeline component.
  *
@@ -1241,13 +1247,6 @@ interface IconActionItem {
      */
     tooltipPlacement?: TooltipProps['placement'];
 }
-/**
- * Default actions rendered when no `actions` prop is supplied.
- *
- * Uses the same Solar icon set as the source reference (invoice toolbar):
- * Edit, View, Print, Send, Share.
- */
-declare const DEFAULT_ICON_ACTIONS: IconActionItem[];
 interface IconActionBarProps extends BoxProps {
     /**
      * Array of action items rendered as `Tooltip` + `IconButton` pairs.
@@ -1288,6 +1287,15 @@ interface IconActionBarProps extends BoxProps {
      */
     actions?: IconActionItem[];
 }
+
+/**
+ * Default actions rendered when no `actions` prop is supplied.
+ *
+ * Uses the same Solar icon set as the source reference (invoice toolbar):
+ * Edit, View, Print, Send, Share.
+ */
+declare const DEFAULT_ICON_ACTIONS: IconActionItem[];
+
 /**
  * IconActionBar — a horizontal row of icon buttons, each paired with a tooltip.
  *
@@ -1362,6 +1370,7 @@ type TwoColumnShowcaseRowProps = Omit<GridProps, 'direction' | 'container' | 'co
     /** `sx` applied to the root `Grid` container. */
     sx?: SxProps<Theme>;
 };
+
 /**
  * `TwoColumnShowcaseRow` lays out a text description alongside an interactive
  * controls area in a responsive two-column grid.
@@ -1396,17 +1405,17 @@ type SectionTitleProps = Omit<BoxProps, 'title'> & {
      */
     txtGradient?: string;
     /** Main heading text. Rendered as an `h2`. */
-    title: React.ReactNode;
+    title: ReactNode;
     /**
      * Short overline label rendered above the heading.
      * Styled as `overline` typography in `text.disabled` colour.
      */
-    caption?: React.ReactNode;
+    caption?: ReactNode;
     /**
      * Supporting description text rendered below the heading.
      * Styled as `body1` in `text.secondary` colour.
      */
-    description?: React.ReactNode;
+    description?: ReactNode;
     /**
      * `sx` overrides for individual text slots.
      */
@@ -1416,6 +1425,17 @@ type SectionTitleProps = Omit<BoxProps, 'title'> & {
         description?: TextSlotProps;
     };
 };
+type SectionCaptionProps = {
+    title: ReactNode;
+    sx?: SxProps<Theme>;
+};
+
+/**
+ * `SectionCaption` renders the overline label above the section heading.
+ * Exported so consumers can use it standalone when they need just the overline.
+ */
+declare function SectionCaption({ title, sx, ...other }: SectionCaptionProps): react_jsx_runtime.JSX.Element;
+
 /**
  * `SectionTitle` renders a stacked heading group: optional overline caption,
  * an `h2` heading with an optional gradient accent word, and an optional
@@ -1438,15 +1458,6 @@ type SectionTitleProps = Omit<BoxProps, 'title'> & {
  * `text.primary` resolves to near-white, giving a natural fade-out.
  */
 declare function SectionTitle({ sx, title, caption, slotProps, txtGradient, description, ...other }: SectionTitleProps): react_jsx_runtime.JSX.Element;
-type SectionCaptionProps = {
-    title: React.ReactNode;
-    sx?: SxProps<Theme>;
-};
-/**
- * `SectionCaption` renders the overline label above the section heading.
- * Exported so consumers can use it standalone when they need just the overline.
- */
-declare function SectionCaption({ title, sx, ...other }: SectionCaptionProps): react_jsx_runtime.JSX.Element;
 
 type FloatingSubNavItem = {
     id: string;

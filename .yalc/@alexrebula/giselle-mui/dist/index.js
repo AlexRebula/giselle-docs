@@ -118,7 +118,7 @@ function GiselleIcon({
 }
 
 // src/components/card/metric/metric-card.tsx
-import Box2 from "@mui/material/Box";
+import Box3 from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 
@@ -148,9 +148,31 @@ var metricCardIconBoxSx = (color) => (theme) => ({
   justifyContent: "center",
   color: theme.vars.palette[color]?.main
 });
+var metricCardDecorationSx = (color) => (theme) => ({
+  top: -40,
+  right: -56,
+  width: 140,
+  height: 140,
+  opacity: 0.1,
+  borderRadius: 4,
+  position: "absolute",
+  transform: "rotate(40deg)",
+  background: `linear-gradient(to right, ${theme.vars.palette[color]?.main}, transparent)`
+});
+
+// src/components/card/metric/metric-card-decoration.tsx
+import Box2 from "@mui/material/Box";
+import { jsx as jsx2 } from "react/jsx-runtime";
+function MetricCardDecoration({
+  color = "primary",
+  sx,
+  ...other
+}) {
+  return /* @__PURE__ */ jsx2(Box2, { sx: [metricCardDecorationSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other });
+}
 
 // src/components/card/metric/metric-card.tsx
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs } from "react/jsx-runtime";
 function MetricCard({
   value,
   label,
@@ -169,11 +191,11 @@ function MetricCard({
       sx: [metricCardPaperSx, ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children: [
-        decoration && /* @__PURE__ */ jsx2(Box2, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
-        /* @__PURE__ */ jsxs(Box2, { sx: { position: "relative", zIndex: 1, flexGrow: 1 }, children: [
-          /* @__PURE__ */ jsx2(Box2, { sx: { typography: "h3" }, children: value }),
-          /* @__PURE__ */ jsx2(Typography, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
-          sublabel && /* @__PURE__ */ jsx2(
+        decoration && /* @__PURE__ */ jsx3(Box3, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
+        /* @__PURE__ */ jsxs(Box3, { sx: { position: "relative", zIndex: 1, flexGrow: 1 }, children: [
+          /* @__PURE__ */ jsx3(Box3, { sx: { typography: "h3" }, children: value }),
+          /* @__PURE__ */ jsx3(Typography, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
+          sublabel && /* @__PURE__ */ jsx3(
             Typography,
             {
               noWrap: true,
@@ -184,41 +206,58 @@ function MetricCard({
             }
           )
         ] }),
-        icon && /* @__PURE__ */ jsx2(Box2, { "aria-hidden": "true", sx: metricCardIconBoxSx(color), children: icon })
+        icon && /* @__PURE__ */ jsx3(Box3, { "aria-hidden": "true", sx: metricCardIconBoxSx(color), children: icon })
       ]
-    }
-  );
-}
-function MetricCardDecoration({
-  color = "primary",
-  sx,
-  ...other
-}) {
-  return /* @__PURE__ */ jsx2(
-    Box2,
-    {
-      sx: [
-        (theme) => ({
-          top: -40,
-          right: -56,
-          width: 140,
-          height: 140,
-          opacity: 0.1,
-          borderRadius: 4,
-          position: "absolute",
-          transform: "rotate(40deg)",
-          background: `linear-gradient(to right, ${theme.vars.palette[color].main}, transparent)`
-        }),
-        ...Array.isArray(sx) ? sx : [sx]
-      ],
-      ...other
     }
   );
 }
 
 // src/components/card/selectable/selectable-card.tsx
 import ButtonBase from "@mui/material/ButtonBase";
-import { jsx as jsx3 } from "react/jsx-runtime";
+
+// src/components/card/selectable/selectable-card.styles.ts
+var selectableCardSx = (selected) => (theme) => ({
+  // --- Layout reset (ButtonBase is inline-flex by default) ---
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  // --- Paper-like surface ---
+  p: 2.5,
+  borderRadius: 1.5,
+  position: "relative",
+  overflow: "hidden",
+  // Contains the MUI ripple within the border-radius
+  border: `1px solid ${theme.vars.palette.divider}`,
+  bgcolor: theme.vars.palette.background.paper,
+  // --- Hover: subtle fill, cursor affordance ---
+  cursor: "pointer",
+  transition: theme.transitions.create(["background-color", "box-shadow"], {
+    duration: theme.transitions.duration.shorter
+  }),
+  "&:hover": {
+    bgcolor: theme.vars.palette.action.hover
+  },
+  // --- Keyboard focus ring ---
+  // .Mui-focusVisible is applied by ButtonBase on keyboard navigation only,
+  // so mouse users never see this ring (good UX + meets WCAG 2.4.11).
+  "&.Mui-focusVisible": {
+    outline: `3px solid ${theme.vars.palette.primary.main}`,
+    outlineOffset: 2
+  },
+  // --- Selected ring (2px outline using box-shadow, doesn't affect layout) ---
+  ...selected && {
+    boxShadow: `0 0 0 2px ${theme.vars.palette.text.primary}`
+  },
+  // --- Disabled: muted + no pointer (ButtonBase also sets aria-disabled) ---
+  "&.Mui-disabled": {
+    opacity: 0.48,
+    cursor: "default",
+    pointerEvents: "none"
+  }
+});
+
+// src/components/card/selectable/selectable-card.tsx
+import { jsx as jsx4 } from "react/jsx-runtime";
 function SelectableCard({
   selected = false,
   disabled = false,
@@ -226,54 +265,13 @@ function SelectableCard({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx3(
+  return /* @__PURE__ */ jsx4(
     ButtonBase,
     {
       disabled,
       "aria-pressed": selected,
       focusRipple: true,
-      sx: [
-        (theme) => ({
-          // --- Layout reset (ButtonBase is inline-flex by default) ---
-          display: "block",
-          width: "100%",
-          textAlign: "left",
-          // --- Paper-like surface ---
-          p: 2.5,
-          borderRadius: 1.5,
-          position: "relative",
-          overflow: "hidden",
-          // Contains the MUI ripple within the border-radius
-          border: `1px solid ${theme.vars.palette.divider}`,
-          bgcolor: theme.vars.palette.background.paper,
-          // --- Hover: subtle fill, cursor affordance ---
-          cursor: "pointer",
-          transition: theme.transitions.create(["background-color", "box-shadow"], {
-            duration: theme.transitions.duration.shorter
-          }),
-          "&:hover": {
-            bgcolor: theme.vars.palette.action.hover
-          },
-          // --- Keyboard focus ring ---
-          // .Mui-focusVisible is applied by ButtonBase on keyboard navigation only,
-          // so mouse users never see this ring (good UX + meets WCAG 2.4.11).
-          "&.Mui-focusVisible": {
-            outline: `3px solid ${theme.vars.palette.primary.main}`,
-            outlineOffset: 2
-          },
-          // --- Selected ring (2px outline using box-shadow, doesn't affect layout) ---
-          ...selected && {
-            boxShadow: `0 0 0 2px ${theme.vars.palette.text.primary}`
-          },
-          // --- Disabled: muted + no pointer (ButtonBase also sets aria-disabled) ---
-          "&.Mui-disabled": {
-            opacity: 0.48,
-            cursor: "default",
-            pointerEvents: "none"
-          }
-        }),
-        ...Array.isArray(sx) ? sx : [sx]
-      ],
+      sx: [selectableCardSx(selected), ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children
     }
@@ -281,7 +279,7 @@ function SelectableCard({
 }
 
 // src/components/card/quote/quote-card.tsx
-import Box3 from "@mui/material/Box";
+import Box4 from "@mui/material/Box";
 import Paper2 from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography2 from "@mui/material/Typography";
@@ -303,9 +301,15 @@ var quoteTextSx = {
   color: "text.secondary",
   lineHeight: 1.85
 };
+var quoteCardPaperSx = (color) => (theme) => ({
+  p: 3,
+  borderRadius: 2,
+  bgcolor: `rgba(${theme.vars.palette[color]?.mainChannel} / 0.06)`,
+  border: `1px solid rgba(${theme.vars.palette[color]?.mainChannel} / 0.12)`
+});
 
 // src/components/card/quote/quote-card.tsx
-import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
 function QuoteCard({
   quote,
   author,
@@ -315,24 +319,16 @@ function QuoteCard({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx4(
+  return /* @__PURE__ */ jsx5(
     Paper2,
     {
       elevation,
-      sx: [
-        (theme) => ({
-          p: 3,
-          borderRadius: 2,
-          bgcolor: `rgba(${theme.vars.palette[color].mainChannel} / 0.06)`,
-          border: `1px solid rgba(${theme.vars.palette[color].mainChannel} / 0.12)`
-        }),
-        ...Array.isArray(sx) ? sx : [sx]
-      ],
+      sx: [quoteCardPaperSx(color), ...Array.isArray(sx) ? sx : [sx]],
       ...other,
-      children: /* @__PURE__ */ jsxs2(Box3, { sx: { display: "flex", gap: 2 }, children: [
-        /* @__PURE__ */ jsx4(Typography2, { "aria-hidden": true, sx: quoteMarkSx(color), children: "\u201C" }),
-        /* @__PURE__ */ jsxs2(Box3, { sx: { flex: 1, minWidth: 0 }, children: [
-          /* @__PURE__ */ jsx4(Typography2, { variant: "body1", sx: quoteTextSx, children: quote }),
+      children: /* @__PURE__ */ jsxs2(Box4, { sx: { display: "flex", gap: 2 }, children: [
+        /* @__PURE__ */ jsx5(Typography2, { "aria-hidden": true, sx: quoteMarkSx(color), children: "\u201C" }),
+        /* @__PURE__ */ jsxs2(Box4, { sx: { flex: 1, minWidth: 0 }, children: [
+          /* @__PURE__ */ jsx5(Typography2, { variant: "body1", sx: quoteTextSx, children: quote }),
           (author || source) && /* @__PURE__ */ jsxs2(
             Stack,
             {
@@ -341,9 +337,9 @@ function QuoteCard({
               alignItems: "center",
               sx: { mt: 2, color: "text.disabled" },
               children: [
-                author && /* @__PURE__ */ jsx4(Typography2, { variant: "caption", sx: { fontWeight: "fontWeightMedium" }, children: author }),
-                author && source && /* @__PURE__ */ jsx4(Typography2, { variant: "caption", "aria-hidden": true, sx: { opacity: 0.6 }, children: "\xB7" }),
-                source && /* @__PURE__ */ jsx4(Typography2, { variant: "caption", sx: { opacity: 0.72 }, children: source })
+                author && /* @__PURE__ */ jsx5(Typography2, { variant: "caption", sx: { fontWeight: "fontWeightMedium" }, children: author }),
+                author && source && /* @__PURE__ */ jsx5(Typography2, { variant: "caption", "aria-hidden": true, sx: { opacity: 0.6 }, children: "\xB7" }),
+                source && /* @__PURE__ */ jsx5(Typography2, { variant: "caption", sx: { opacity: 0.72 }, children: source })
               ]
             }
           )
@@ -354,7 +350,7 @@ function QuoteCard({
 }
 
 // src/components/card/stat/stat-card.tsx
-import Box4 from "@mui/material/Box";
+import Box5 from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Typography3 from "@mui/material/Typography";
 
@@ -410,8 +406,8 @@ var STAT_CARD_SPARKLINE_OPTIONS = {
   markers: { strokeWidth: 0 }
 };
 
-// src/components/card/stat/stat-card.tsx
-import { jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
+// src/components/card/stat/stat-card-shape.tsx
+import { jsx as jsx6, jsxs as jsxs3 } from "react/jsx-runtime";
 function StatCardShape() {
   return /* @__PURE__ */ jsxs3(
     "svg",
@@ -422,7 +418,7 @@ function StatCardShape() {
       fill: "none",
       xmlns: "http://www.w3.org/2000/svg",
       children: [
-        /* @__PURE__ */ jsx5(
+        /* @__PURE__ */ jsx6(
           "rect",
           {
             x: "14",
@@ -435,7 +431,7 @@ function StatCardShape() {
             fillOpacity: "0.16"
           }
         ),
-        /* @__PURE__ */ jsx5(
+        /* @__PURE__ */ jsx6(
           "rect",
           {
             x: "32",
@@ -452,6 +448,9 @@ function StatCardShape() {
     }
   );
 }
+
+// src/components/card/stat/stat-card.tsx
+import { jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
 function StatCard({
   label,
   value,
@@ -464,17 +463,17 @@ function StatCard({
   ...other
 }) {
   const isUp = (trend ?? 0) >= 0;
-  return /* @__PURE__ */ jsxs3(Card, { sx: [statCardRootSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    /* @__PURE__ */ jsx5(Box4, { "aria-hidden": "true", sx: decorationSx, children: /* @__PURE__ */ jsx5(StatCardShape, {}) }),
-    /* @__PURE__ */ jsx5(Box4, { sx: iconBoxSx, children: icon }),
-    trend !== void 0 && /* @__PURE__ */ jsxs3(Box4, { sx: trendBoxSx, children: [
-      /* @__PURE__ */ jsx5(GiselleIcon, { width: 20, icon: isUp ? "eva:trending-up-fill" : "eva:trending-down-fill" }),
-      /* @__PURE__ */ jsxs3(Typography3, { component: "span", variant: "subtitle2", children: [
+  return /* @__PURE__ */ jsxs4(Card, { sx: [statCardRootSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    /* @__PURE__ */ jsx7(Box5, { "aria-hidden": "true", sx: decorationSx, children: /* @__PURE__ */ jsx7(StatCardShape, {}) }),
+    /* @__PURE__ */ jsx7(Box5, { sx: iconBoxSx, children: icon }),
+    trend !== void 0 && /* @__PURE__ */ jsxs4(Box5, { sx: trendBoxSx, children: [
+      /* @__PURE__ */ jsx7(GiselleIcon, { width: 20, icon: isUp ? "eva:trending-up-fill" : "eva:trending-down-fill" }),
+      /* @__PURE__ */ jsxs4(Typography3, { component: "span", variant: "subtitle2", children: [
         isUp && "+",
         trend,
         "%"
       ] }),
-      trendLabel && /* @__PURE__ */ jsx5(
+      trendLabel && /* @__PURE__ */ jsx7(
         Typography3,
         {
           component: "span",
@@ -484,10 +483,10 @@ function StatCard({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs3(Box4, { sx: contentRowSx, children: [
-      /* @__PURE__ */ jsxs3(Box4, { sx: labelsBoxSx, children: [
-        /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle2", sx: { mb: 0.5 }, children: label }),
-        /* @__PURE__ */ jsx5(Typography3, { variant: "h4", children: value })
+    /* @__PURE__ */ jsxs4(Box5, { sx: contentRowSx, children: [
+      /* @__PURE__ */ jsxs4(Box5, { sx: labelsBoxSx, children: [
+        /* @__PURE__ */ jsx7(Typography3, { variant: "subtitle2", sx: { mb: 0.5 }, children: label }),
+        /* @__PURE__ */ jsx7(Typography3, { variant: "h4", children: value })
       ] }),
       chart
     ] })
@@ -499,7 +498,7 @@ import { useState as useState2, useRef, useCallback as useCallback2 } from "reac
 
 // src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
 import { useState, useCallback, useMemo, useEffect } from "react";
-import Box5 from "@mui/material/Box";
+import Box7 from "@mui/material/Box";
 import Paper3 from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
 import Slider from "@mui/material/Slider";
@@ -901,8 +900,10 @@ var ganttBarSx = (leftPct, widthPct, isOverlapping, sliderColor) => (theme) => (
   }
 });
 
-// src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
-import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
+// src/components/timeline/two-column/phase-warning-popover/mini-gantt-ruler.tsx
+import Box6 from "@mui/material/Box";
+
+// src/components/timeline/two-column/phase-warning-popover/utils.ts
 function parsePhaseRange(phase) {
   const parts = phase.date.split(/\s*[–-]\s*/u);
   const startIdx = dateToMonthIndex(parts[0] ?? "");
@@ -980,15 +981,14 @@ function resolveSliderColor(color) {
   if (!color || color === "inherit" || color === "grey") return "primary";
   return color;
 }
-function MiniGanttRuler({
-  axis,
-  conflictingPhases,
-  overrides
-}) {
+
+// src/components/timeline/two-column/phase-warning-popover/mini-gantt-ruler.tsx
+import { jsx as jsx8 } from "react/jsx-runtime";
+function MiniGanttRuler({ axis, conflictingPhases, overrides }) {
   const span = axis.max - axis.min;
   if (span <= 0) return null;
   const rangeList = Array.from(overrides.entries());
-  return /* @__PURE__ */ jsx6(Box5, { "aria-hidden": true, sx: ganttTrackSx, children: conflictingPhases.map((phase) => {
+  return /* @__PURE__ */ jsx8(Box6, { "aria-hidden": true, sx: ganttTrackSx, children: conflictingPhases.map((phase) => {
     const override = overrides.get(phase.key);
     if (!override) return null;
     const leftPct = (override.startIdx - axis.min) / span * 100;
@@ -997,9 +997,12 @@ function MiniGanttRuler({
     const isOverlapping = rangeList.some(
       ([otherKey, other]) => otherKey !== phase.key && override.startIdx <= other.endIdx && other.startIdx <= override.endIdx
     );
-    return /* @__PURE__ */ jsx6(Box5, { sx: ganttBarSx(leftPct, widthPct, isOverlapping, sliderColor) }, phase.key);
+    return /* @__PURE__ */ jsx8(Box6, { sx: ganttBarSx(leftPct, widthPct, isOverlapping, sliderColor) }, phase.key);
   }) });
 }
+
+// src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
+import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
 function PhaseWarningPopover({
   open,
   anchorEl,
@@ -1064,7 +1067,7 @@ function PhaseWarningPopover({
   }, [conflictingPhases]);
   const warningCount = conflictingPhases.length;
   if (!open || !anchorEl) return null;
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx9(
     Popper,
     {
       open,
@@ -1072,9 +1075,9 @@ function PhaseWarningPopover({
       placement: "bottom-start",
       modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
       sx: { zIndex: (theme) => theme.zIndex.tooltip + 1 },
-      children: /* @__PURE__ */ jsx6(ClickAwayListener, { onClickAway: onClose, children: /* @__PURE__ */ jsxs4(Paper3, { elevation: 8, sx: popoverPaperSx, children: [
-        /* @__PURE__ */ jsxs4(Box5, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-          /* @__PURE__ */ jsxs4(
+      children: /* @__PURE__ */ jsx9(ClickAwayListener, { onClickAway: onClose, children: /* @__PURE__ */ jsxs5(Paper3, { elevation: 8, sx: popoverPaperSx, children: [
+        /* @__PURE__ */ jsxs5(Box7, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+          /* @__PURE__ */ jsxs5(
             Typography4,
             {
               variant: "subtitle2",
@@ -1087,7 +1090,7 @@ function PhaseWarningPopover({
               ]
             }
           ),
-          /* @__PURE__ */ jsx6(
+          /* @__PURE__ */ jsx9(
             IconButton,
             {
               size: "small",
@@ -1098,29 +1101,29 @@ function PhaseWarningPopover({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx6(Divider, {}),
-        /* @__PURE__ */ jsxs4(Box5, { children: [
-          /* @__PURE__ */ jsx6(Typography4, { variant: "body2", color: "warning.main", sx: { fontWeight: 500 }, children: `Overlap: ${conflictingPhases.map((p) => p.shortTitle ?? p.title).join(" \u2194 ")}` }),
-          /* @__PURE__ */ jsxs4(Typography4, { variant: "caption", color: "text.secondary", sx: { mt: 0.5, display: "block" }, children: [
+        /* @__PURE__ */ jsx9(Divider, {}),
+        /* @__PURE__ */ jsxs5(Box7, { children: [
+          /* @__PURE__ */ jsx9(Typography4, { variant: "body2", color: "warning.main", sx: { fontWeight: 500 }, children: `Overlap: ${conflictingPhases.map((p) => p.shortTitle ?? p.title).join(" \u2194 ")}` }),
+          /* @__PURE__ */ jsxs5(Typography4, { variant: "caption", color: "text.secondary", sx: { mt: 0.5, display: "block" }, children: [
             currentPhase.shortTitle ?? currentPhase.title,
             " \u2014 adjust sliders or use Make sequential."
           ] })
         ] }),
-        /* @__PURE__ */ jsx6(Divider, {}),
-        /* @__PURE__ */ jsx6(Box5, { sx: { display: "flex", flexDirection: "column", gap: 1.5 }, children: conflictingPhases.map((phase) => {
+        /* @__PURE__ */ jsx9(Divider, {}),
+        /* @__PURE__ */ jsx9(Box7, { sx: { display: "flex", flexDirection: "column", gap: 1.5 }, children: conflictingPhases.map((phase) => {
           const override = overrides.get(phase.key);
           if (!override) return null;
           const sliderColor = resolveSliderColor(phase.color);
-          return /* @__PURE__ */ jsxs4(Box5, { children: [
-            /* @__PURE__ */ jsxs4(Box5, { sx: sliderRowHeaderSx, children: [
-              /* @__PURE__ */ jsx6(Typography4, { variant: "caption", fontWeight: 600, children: phase.shortTitle ?? phase.title }),
-              /* @__PURE__ */ jsxs4(Typography4, { variant: "caption", color: "text.secondary", children: [
+          return /* @__PURE__ */ jsxs5(Box7, { children: [
+            /* @__PURE__ */ jsxs5(Box7, { sx: sliderRowHeaderSx, children: [
+              /* @__PURE__ */ jsx9(Typography4, { variant: "caption", fontWeight: 600, children: phase.shortTitle ?? phase.title }),
+              /* @__PURE__ */ jsxs5(Typography4, { variant: "caption", color: "text.secondary", children: [
                 monthIndexToDate(override.startIdx),
                 " \u2013 ",
                 monthIndexToDate(override.endIdx)
               ] })
             ] }),
-            /* @__PURE__ */ jsx6(
+            /* @__PURE__ */ jsx9(
               Slider,
               {
                 value: [override.startIdx, override.endIdx],
@@ -1136,10 +1139,10 @@ function PhaseWarningPopover({
             )
           ] }, phase.key);
         }) }),
-        /* @__PURE__ */ jsx6(MiniGanttRuler, { axis, conflictingPhases, overrides }),
-        /* @__PURE__ */ jsx6(Divider, {}),
-        /* @__PURE__ */ jsxs4(Box5, { sx: actionsRowSx, children: [
-          /* @__PURE__ */ jsx6(
+        /* @__PURE__ */ jsx9(MiniGanttRuler, { axis, conflictingPhases, overrides }),
+        /* @__PURE__ */ jsx9(Divider, {}),
+        /* @__PURE__ */ jsxs5(Box7, { sx: actionsRowSx, children: [
+          /* @__PURE__ */ jsx9(
             Button,
             {
               size: "small",
@@ -1150,8 +1153,8 @@ function PhaseWarningPopover({
               children: "Make sequential"
             }
           ),
-          pendingApply && /* @__PURE__ */ jsxs4(Box5, { sx: { display: "flex", gap: 1 }, children: [
-            /* @__PURE__ */ jsx6(
+          pendingApply && /* @__PURE__ */ jsxs5(Box7, { sx: { display: "flex", gap: 1 }, children: [
+            /* @__PURE__ */ jsx9(
               Button,
               {
                 size: "small",
@@ -1162,7 +1165,7 @@ function PhaseWarningPopover({
                 children: "Apply"
               }
             ),
-            /* @__PURE__ */ jsx6(
+            /* @__PURE__ */ jsx9(
               Button,
               {
                 size: "small",
@@ -1180,15 +1183,14 @@ function PhaseWarningPopover({
 }
 
 // src/components/timeline/two-column/phase-card/phase-card.tsx
-import Box6 from "@mui/material/Box";
+import Box13 from "@mui/material/Box";
 import Paper4 from "@mui/material/Paper";
-import Collapse from "@mui/material/Collapse";
-import Tooltip from "@mui/material/Tooltip";
-import Typography5 from "@mui/material/Typography";
+import Tooltip3 from "@mui/material/Tooltip";
+import Typography9 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/icons.tsx
-import { jsx as jsx7, jsxs as jsxs5 } from "react/jsx-runtime";
-var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx7(
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx10(
   "svg",
   {
     xmlns: "http://www.w3.org/2000/svg",
@@ -1197,10 +1199,10 @@ var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx7(
     viewBox: "0 0 24 24",
     "aria-hidden": "true",
     focusable: "false",
-    children: /* @__PURE__ */ jsx7("g", { children: /* @__PURE__ */ jsxs5("g", { fill: "currentColor", fillRule: "evenodd", clipRule: "evenodd", children: [
-      /* @__PURE__ */ jsx7("path", { d: "M8.308 5.148a3.15 3.15 0 0 1-3.154 3.148A3.15 3.15 0 0 1 2 5.148A3.15 3.15 0 0 1 5.154 2a3.15 3.15 0 0 1 3.154 3.148M5.154 6.296a1.15 1.15 0 0 0 1.154-1.148A1.15 1.15 0 0 0 5.154 4A1.15 1.15 0 0 0 4 5.148a1.15 1.15 0 0 0 1.154 1.148M21 18.924a3.15 3.15 0 0 1-3.154 3.147a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.147c1.732 0 3.154 1.4 3.154 3.148m-3.154 1.147A1.15 1.15 0 0 0 19 18.923c0-.633-.517-1.147-1.154-1.147a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.147M21 11.462a3.15 3.15 0 0 1-3.154 3.148a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.148A3.15 3.15 0 0 1 21 11.462m-3.154 1.148A1.15 1.15 0 0 0 19 11.462c0-.634-.517-1.148-1.154-1.148a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.148" }),
-      /* @__PURE__ */ jsx7("path", { d: "M5.154 7.018a1 1 0 0 1 1 1v6.784a3.154 3.154 0 0 0 3.13 3.154l5.724.044a1 1 0 0 1-.016 2l-5.724-.044a5.154 5.154 0 0 1-5.114-5.154V8.018a1 1 0 0 1 1-1" }),
-      /* @__PURE__ */ jsx7("path", { d: "M9.172 12.462a5.02 5.02 0 0 1-5.018-5.018h2a3.02 3.02 0 0 0 3.018 3.018H15a1 1 0 1 1 0 2z" })
+    children: /* @__PURE__ */ jsx10("g", { children: /* @__PURE__ */ jsxs6("g", { fill: "currentColor", fillRule: "evenodd", clipRule: "evenodd", children: [
+      /* @__PURE__ */ jsx10("path", { d: "M8.308 5.148a3.15 3.15 0 0 1-3.154 3.148A3.15 3.15 0 0 1 2 5.148A3.15 3.15 0 0 1 5.154 2a3.15 3.15 0 0 1 3.154 3.148M5.154 6.296a1.15 1.15 0 0 0 1.154-1.148A1.15 1.15 0 0 0 5.154 4A1.15 1.15 0 0 0 4 5.148a1.15 1.15 0 0 0 1.154 1.148M21 18.924a3.15 3.15 0 0 1-3.154 3.147a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.147c1.732 0 3.154 1.4 3.154 3.148m-3.154 1.147A1.15 1.15 0 0 0 19 18.923c0-.633-.517-1.147-1.154-1.147a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.147M21 11.462a3.15 3.15 0 0 1-3.154 3.148a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.148A3.15 3.15 0 0 1 21 11.462m-3.154 1.148A1.15 1.15 0 0 0 19 11.462c0-.634-.517-1.148-1.154-1.148a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.148" }),
+      /* @__PURE__ */ jsx10("path", { d: "M5.154 7.018a1 1 0 0 1 1 1v6.784a3.154 3.154 0 0 0 3.13 3.154l5.724.044a1 1 0 0 1-.016 2l-5.724-.044a5.154 5.154 0 0 1-5.114-5.154V8.018a1 1 0 0 1 1-1" }),
+      /* @__PURE__ */ jsx10("path", { d: "M9.172 12.462a5.02 5.02 0 0 1-5.018-5.018h2a3.02 3.02 0 0 0 3.018 3.018H15a1 1 0 1 1 0 2z" })
     ] }) })
   }
 );
@@ -1247,6 +1249,17 @@ function derivePlatformEntry(p) {
   const label = isString ? p : p.label;
   const icon = isString ? null : p.icon;
   return { label, icon, hasTextFallback: isString };
+}
+
+// src/components/timeline/two-column/phase-card/platform-strip.tsx
+import Box8 from "@mui/material/Box";
+import Tooltip from "@mui/material/Tooltip";
+import { jsx as jsx11 } from "react/jsx-runtime";
+function buildPlatformStripItems(platforms) {
+  return platforms.map((p, i) => {
+    const { label, icon } = derivePlatformEntry(p);
+    return /* @__PURE__ */ jsx11(Tooltip, { title: label, arrow: true, placement: "top", children: /* @__PURE__ */ jsx11(Box8, { sx: { display: "flex", alignItems: "center", justifyContent: "center" }, children: icon ?? /* @__PURE__ */ jsx11(Box8, { component: "span", sx: { fontSize: 11, px: 0.5 }, children: label }) }) }, `platform-${i}`);
+  });
 }
 
 // src/components/timeline/two-column/animations.ts
@@ -1521,9 +1534,32 @@ function buildDateTypographySx({
     color: isScenario ? `${color ?? "primary"}.main` : "text.disabled"
   };
 }
+var buildCardDecorationGradientSx = (color, isOverduePending) => (theme) => ({
+  top: -40,
+  right: -56,
+  width: 140,
+  height: 140,
+  borderRadius: 4,
+  position: "absolute",
+  transform: "rotate(40deg)",
+  pointerEvents: "none",
+  background: `linear-gradient(to right, ${theme.vars.palette[isOverduePending ? "error" : color]?.main ?? theme.vars.palette.primary.main}, transparent)`,
+  opacity: isOverduePending ? 0.18 : 0.08
+});
+var cornerAlertTooltipSx = {
+  maxWidth: 320,
+  px: 1.75,
+  py: 1.25,
+  bgcolor: "grey.900",
+  "& .MuiTooltip-arrow": { color: "grey.900" }
+};
+var pillIconBoxSx = (iconSize) => ({
+  display: "inline-flex",
+  flexShrink: 0,
+  "& svg": { width: iconSize, height: iconSize }
+});
 
-// src/components/timeline/two-column/phase-card/phase-card.tsx
-import { Fragment, jsx as jsx8, jsxs as jsxs6 } from "react/jsx-runtime";
+// src/components/timeline/two-column/phase-card/phase-card.const.ts
 var CORNER_ALERT_BADGE_SIZE = 26;
 var CORNER_ALERT_ICON_SIZE = 16;
 var CORNER_ALERT_LIST_ICON_SIZE = 16;
@@ -1532,12 +1568,23 @@ var EYE_BUTTON_MIN_SIZE = 28;
 var PHASE_PILL_ICON_SIZE = 16;
 var PHASE_PILL_TEXT_FONT_SIZE = "0.75rem";
 var PHASE_TASK_ICON_SIZE = 16;
+
+// src/components/timeline/two-column/phase-card/labeled-icon-strip.tsx
+import Box9 from "@mui/material/Box";
+import Typography5 from "@mui/material/Typography";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
 function LabeledIconStrip({ label, children }) {
-  return /* @__PURE__ */ jsxs6(Box6, { sx: { mt: 2.5 }, children: [
-    label && /* @__PURE__ */ jsx8(Typography5, { variant: "overline", sx: labeledIconStripLabelSx, children: label }),
+  return /* @__PURE__ */ jsxs7(Box9, { sx: { mt: 2.5 }, children: [
+    label && /* @__PURE__ */ jsx12(Typography5, { variant: "overline", sx: labeledIconStripLabelSx, children: label }),
     children
   ] });
 }
+
+// src/components/timeline/two-column/phase-card/card-detail-bullets.tsx
+import Box10 from "@mui/material/Box";
+import Collapse from "@mui/material/Collapse";
+import Typography6 from "@mui/material/Typography";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 function CardDetailBullets({
   id,
   details,
@@ -1545,19 +1592,19 @@ function CardDetailBullets({
   taskDoneStates,
   onToggleTask
 }) {
-  return /* @__PURE__ */ jsx8(Collapse, { in: expanded, timeout: 50, children: /* @__PURE__ */ jsx8(Box6, { id, sx: detailBulletsContainerSx, children: details.map((task, i) => {
+  return /* @__PURE__ */ jsx13(Collapse, { in: expanded, timeout: 50, children: /* @__PURE__ */ jsx13(Box10, { id, sx: detailBulletsContainerSx, children: details.map((task, i) => {
     const isDoneTask = taskDoneStates ? taskDoneStates[i] ?? false : task.done ?? false;
     const toggleLabel = isDoneTask ? `Mark "${task.title}" as not done` : `Mark "${task.title}" as done`;
-    return /* @__PURE__ */ jsxs6(Box6, { sx: taskRowSx, children: [
-      /* @__PURE__ */ jsx8(
-        Box6,
+    return /* @__PURE__ */ jsxs8(Box10, { sx: taskRowSx, children: [
+      /* @__PURE__ */ jsx13(
+        Box10,
         {
           component: onToggleTask ? "button" : "span",
           "aria-label": onToggleTask ? toggleLabel : void 0,
           "aria-pressed": onToggleTask ? isDoneTask : void 0,
           onClick: onToggleTask ? () => onToggleTask(i, !isDoneTask) : void 0,
           sx: onToggleTask ? [taskToggleButtonSx, taskToggleColorSx(isDoneTask)] : [taskIconStaticSx, taskIconColorSx(isDoneTask)],
-          children: /* @__PURE__ */ jsx8(
+          children: /* @__PURE__ */ jsx13(
             GiselleIcon,
             {
               icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
@@ -1566,10 +1613,16 @@ function CardDetailBullets({
           )
         }
       ),
-      /* @__PURE__ */ jsx8(Typography5, { variant: "body2", sx: taskTitleSx(isDoneTask), children: task.title })
+      /* @__PURE__ */ jsx13(Typography6, { variant: "body2", sx: taskTitleSx(isDoneTask), children: task.title })
     ] }, i);
   }) }) });
 }
+
+// src/components/timeline/two-column/phase-card/card-corner-alert-badge.tsx
+import Box11 from "@mui/material/Box";
+import Tooltip2 from "@mui/material/Tooltip";
+import Typography7 from "@mui/material/Typography";
+import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
 function CardCornerAlertBadge({
   alerts,
   columnSide = "right",
@@ -1579,8 +1632,8 @@ function CardCornerAlertBadge({
   if (alerts.length === 0) return null;
   const hasError = alerts.some((a) => a.severity === "error");
   const { left, right, transform, tooltipPlacement } = resolveCornerBadgeAlign(columnSide);
-  const tooltipContent = /* @__PURE__ */ jsx8(Box6, { sx: tooltipAlertListSx, children: alerts.map((a, i) => /* @__PURE__ */ jsxs6(Box6, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: [
-    /* @__PURE__ */ jsx8(
+  const tooltipContent = /* @__PURE__ */ jsx14(Box11, { sx: tooltipAlertListSx, children: alerts.map((a, i) => /* @__PURE__ */ jsxs9(Box11, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: [
+    /* @__PURE__ */ jsx14(
       GiselleIcon,
       {
         icon: "solar:danger-triangle-bold",
@@ -1589,8 +1642,8 @@ function CardCornerAlertBadge({
         style: { flexShrink: 0, marginTop: 2 }
       }
     ),
-    /* @__PURE__ */ jsx8(
-      Typography5,
+    /* @__PURE__ */ jsx14(
+      Typography7,
       {
         variant: "body2",
         sx: { lineHeight: 1.55, fontSize: "0.8rem", fontWeight: 500 },
@@ -1598,8 +1651,8 @@ function CardCornerAlertBadge({
       }
     )
   ] }, i)) });
-  const badgeCircle = /* @__PURE__ */ jsx8(
-    Box6,
+  const badgeCircle = /* @__PURE__ */ jsx14(
+    Box11,
     {
       ref: innerRef,
       role: onClick ? "button" : void 0,
@@ -1619,69 +1672,48 @@ function CardCornerAlertBadge({
         hasClickHandler: !!onClick,
         badgeSize: CORNER_ALERT_BADGE_SIZE
       }),
-      children: /* @__PURE__ */ jsx8(GiselleIcon, { icon: "solar:danger-triangle-bold", width: CORNER_ALERT_ICON_SIZE, "aria-hidden": true })
+      children: /* @__PURE__ */ jsx14(GiselleIcon, { icon: "solar:danger-triangle-bold", width: CORNER_ALERT_ICON_SIZE, "aria-hidden": true })
     }
   );
   if (onClick) return badgeCircle;
-  return /* @__PURE__ */ jsx8(
-    Tooltip,
+  return /* @__PURE__ */ jsx14(
+    Tooltip2,
     {
       title: tooltipContent,
       placement: tooltipPlacement,
       arrow: true,
-      slotProps: {
-        tooltip: {
-          sx: {
-            maxWidth: 320,
-            px: 1.75,
-            py: 1.25,
-            bgcolor: "grey.900",
-            "& .MuiTooltip-arrow": { color: "grey.900" }
-          }
-        }
-      },
+      slotProps: { tooltip: { sx: cornerAlertTooltipSx } },
       children: badgeCircle
     }
   );
 }
+
+// src/components/timeline/two-column/phase-card/scenario-badge.tsx
+import Typography8 from "@mui/material/Typography";
+import { jsx as jsx15 } from "react/jsx-runtime";
 function ScenarioBadge({ color, scenarioLabel }) {
-  return /* @__PURE__ */ jsx8(Typography5, { variant: "overline", sx: scenarioBadgeSx(color), children: scenarioLabel });
+  return /* @__PURE__ */ jsx15(Typography8, { variant: "overline", sx: scenarioBadgeSx(color), children: scenarioLabel });
 }
+
+// src/components/timeline/two-column/phase-card/card-status-badge.tsx
+import { jsx as jsx16 } from "react/jsx-runtime";
 function CardStatusBadge({ color, isScenario, scenarioLabel }) {
   if (!isScenario || !scenarioLabel) return null;
-  return /* @__PURE__ */ jsx8(ScenarioBadge, { color, scenarioLabel });
+  return /* @__PURE__ */ jsx16(ScenarioBadge, { color, scenarioLabel });
 }
+
+// src/components/timeline/two-column/phase-card/card-decoration.tsx
+import Box12 from "@mui/material/Box";
+import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 function CardDecoration({ color, isOverduePending, icon }) {
-  return /* @__PURE__ */ jsxs6(Fragment, { children: [
-    /* @__PURE__ */ jsx8(
-      Box6,
-      {
-        "aria-hidden": true,
-        sx: [
-          (theme) => ({
-            top: -40,
-            right: -56,
-            width: 140,
-            height: 140,
-            borderRadius: 4,
-            position: "absolute",
-            transform: "rotate(40deg)",
-            pointerEvents: "none",
-            background: `linear-gradient(to right, ${theme.vars.palette[isOverduePending ? "error" : color]?.main ?? theme.vars.palette.primary.main}, transparent)`,
-            opacity: isOverduePending ? 0.18 : 0.08
-          })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsx8(Box6, { "aria-hidden": "true", sx: phaseCardIconBoxSx(color, isOverduePending), children: icon })
+  return /* @__PURE__ */ jsxs10(Fragment, { children: [
+    /* @__PURE__ */ jsx17(Box12, { "aria-hidden": true, sx: buildCardDecorationGradientSx(color, isOverduePending) }),
+    /* @__PURE__ */ jsx17(Box12, { "aria-hidden": "true", sx: phaseCardIconBoxSx(color, isOverduePending), children: icon })
   ] });
 }
-function buildPlatformStripItems(platforms) {
-  return platforms.map((p, i) => {
-    const { label, icon } = derivePlatformEntry(p);
-    return /* @__PURE__ */ jsx8(Tooltip, { title: label, arrow: true, placement: "top", children: /* @__PURE__ */ jsx8(Box6, { sx: { display: "flex", alignItems: "center", justifyContent: "center" }, children: icon ?? /* @__PURE__ */ jsx8(Box6, { component: "span", sx: { fontSize: 11, px: 0.5 }, children: label }) }) }, `platform-${i}`);
-  });
-}
+
+// src/components/timeline/two-column/phase-card/phase-card.tsx
+import { jsx as jsx18, jsxs as jsxs11 } from "react/jsx-runtime";
 function PhaseCard({
   phase,
   done,
@@ -1737,8 +1769,8 @@ function PhaseCard({
       severity: "warning"
     });
   }
-  return /* @__PURE__ */ jsxs6(Box6, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsxs11(Box13, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    /* @__PURE__ */ jsx18(
       CardCornerAlertBadge,
       {
         alerts: cornerAlerts,
@@ -1747,7 +1779,7 @@ function PhaseCard({
         innerRef: popoverMode ? badgeRef : void 0
       }
     ),
-    popoverMode && onPhasesChange && allPhases && /* @__PURE__ */ jsx8(
+    popoverMode && onPhasesChange && allPhases && /* @__PURE__ */ jsx18(
       PhaseWarningPopover,
       {
         open: popoverOpen,
@@ -1758,7 +1790,7 @@ function PhaseCard({
         onPhasesChange
       }
     ),
-    /* @__PURE__ */ jsxs6(
+    /* @__PURE__ */ jsxs11(
       Paper4,
       {
         role: hasDetails ? "button" : void 0,
@@ -1783,7 +1815,7 @@ function PhaseCard({
           })
         ],
         children: [
-          !isHighlighted && !phase.hideDecoration && /* @__PURE__ */ jsx8(
+          !isHighlighted && !phase.hideDecoration && /* @__PURE__ */ jsx18(
             CardDecoration,
             {
               color: phase.color ?? "primary",
@@ -1791,7 +1823,7 @@ function PhaseCard({
               icon: phase.icon
             }
           ),
-          /* @__PURE__ */ jsx8(
+          /* @__PURE__ */ jsx18(
             CardStatusBadge,
             {
               color: phase.color ?? "primary",
@@ -1799,8 +1831,8 @@ function PhaseCard({
               scenarioLabel: phase.scenarioLabel
             }
           ),
-          !phase.hideDate && phase.date && /* @__PURE__ */ jsx8(
-            Typography5,
+          !phase.hideDate && phase.date && /* @__PURE__ */ jsx18(
+            Typography9,
             {
               variant: "subtitle2",
               sx: buildDateTypographySx({
@@ -1812,35 +1844,24 @@ function PhaseCard({
               children: phase.date
             }
           ),
-          /* @__PURE__ */ jsx8(Box6, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: /* @__PURE__ */ jsxs6(Box6, { sx: { flex: 1 }, children: [
-            /* @__PURE__ */ jsx8(
-              Typography5,
+          /* @__PURE__ */ jsx18(Box13, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: /* @__PURE__ */ jsxs11(Box13, { sx: { flex: 1 }, children: [
+            /* @__PURE__ */ jsx18(
+              Typography9,
               {
                 variant: isScenario ? "h6" : "subtitle1",
                 sx: { mb: hasDetails ? 0.5 : 1, pr: !isHighlighted && !phase.hideDecoration ? 6 : 0 },
                 children: displayTitle
               }
             ),
-            hasDetails && /* @__PURE__ */ jsxs6(
-              Box6,
+            hasDetails && /* @__PURE__ */ jsxs11(
+              Box13,
               {
                 sx: detailCountPillSx,
                 "aria-label": `${taskChildren.length} expandable detail${taskChildren.length === 1 ? "" : "s"}`,
                 children: [
-                  /* @__PURE__ */ jsx8(
-                    Box6,
-                    {
-                      component: "span",
-                      sx: {
-                        display: "inline-flex",
-                        flexShrink: 0,
-                        "& svg": { width: PHASE_PILL_ICON_SIZE, height: PHASE_PILL_ICON_SIZE }
-                      },
-                      children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON
-                    }
-                  ),
-                  /* @__PURE__ */ jsx8(
-                    Typography5,
+                  /* @__PURE__ */ jsx18(Box13, { component: "span", sx: pillIconBoxSx(PHASE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
+                  /* @__PURE__ */ jsx18(
+                    Typography9,
                     {
                       component: "span",
                       variant: "caption",
@@ -1851,14 +1872,14 @@ function PhaseCard({
                 ]
               }
             ),
-            expanded && phase.description && /* @__PURE__ */ jsx8(Typography5, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: phase.description }),
-            expanded && resolvePhotoSources(phase)?.map((p, i) => /* @__PURE__ */ jsx8(Box6, { component: "img", src: p.src, alt: p.alt, sx: photoImgSx(i === 0) }, i)),
-            expanded && phase.clients && /* @__PURE__ */ jsx8(LabeledIconStrip, { label: phase.clientsLabel, children: /* @__PURE__ */ jsx8(Box6, { sx: logoStripSx, children: phase.clients.map(({ name, logo }) => /* @__PURE__ */ jsx8(Tooltip, { title: name, arrow: true, children: /* @__PURE__ */ jsx8(Box6, { component: "img", src: logo, alt: name, sx: clientLogoSx }) }, name)) }) }),
-            expanded && phase.platforms && phase.platforms.length > 0 && /* @__PURE__ */ jsx8(LabeledIconStrip, { label: phase.platformsLabel ?? "Tech Stack", children: /* @__PURE__ */ jsx8(Box6, { sx: platformStripSx, children: buildPlatformStripItems(phase.platforms) }) }),
-            expanded && phase.projects && /* @__PURE__ */ jsx8(LabeledIconStrip, { label: phase.projectsLabel, children: /* @__PURE__ */ jsx8(Box6, { sx: logoStripSx, children: phase.projects.map(({ name, logo }) => /* @__PURE__ */ jsx8(Box6, { component: "img", src: logo, alt: name, sx: projectLogoSx }, name)) }) }),
-            expanded && phase.footer != null && /* @__PURE__ */ jsx8(Box6, { sx: { mt: 1 }, onClick: (e) => e.stopPropagation(), children: phase.footer })
+            expanded && phase.description && /* @__PURE__ */ jsx18(Typography9, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: phase.description }),
+            expanded && resolvePhotoSources(phase)?.map((p, i) => /* @__PURE__ */ jsx18(Box13, { component: "img", src: p.src, alt: p.alt, sx: photoImgSx(i === 0) }, i)),
+            expanded && phase.clients && /* @__PURE__ */ jsx18(LabeledIconStrip, { label: phase.clientsLabel, children: /* @__PURE__ */ jsx18(Box13, { sx: logoStripSx, children: phase.clients.map(({ name, logo }) => /* @__PURE__ */ jsx18(Tooltip3, { title: name, arrow: true, children: /* @__PURE__ */ jsx18(Box13, { component: "img", src: logo, alt: name, sx: clientLogoSx }) }, name)) }) }),
+            expanded && phase.platforms && phase.platforms.length > 0 && /* @__PURE__ */ jsx18(LabeledIconStrip, { label: phase.platformsLabel ?? "Tech Stack", children: /* @__PURE__ */ jsx18(Box13, { sx: platformStripSx, children: buildPlatformStripItems(phase.platforms) }) }),
+            expanded && phase.projects && /* @__PURE__ */ jsx18(LabeledIconStrip, { label: phase.projectsLabel, children: /* @__PURE__ */ jsx18(Box13, { sx: logoStripSx, children: phase.projects.map(({ name, logo }) => /* @__PURE__ */ jsx18(Box13, { component: "img", src: logo, alt: name, sx: projectLogoSx }, name)) }) }),
+            expanded && phase.footer != null && /* @__PURE__ */ jsx18(Box13, { sx: { mt: 1 }, onClick: (e) => e.stopPropagation(), children: phase.footer })
           ] }) }),
-          hasDetails && /* @__PURE__ */ jsx8(
+          hasDetails && /* @__PURE__ */ jsx18(
             CardDetailBullets,
             {
               id: detailsId,
@@ -1871,14 +1892,14 @@ function PhaseCard({
         ]
       }
     ),
-    onMarkViewed && /* @__PURE__ */ jsx8(
-      Tooltip,
+    onMarkViewed && /* @__PURE__ */ jsx18(
+      Tooltip3,
       {
         title: isViewed ? "Mark as not viewed" : "Mark as viewed",
         placement: columnSide === "left" ? "right" : "left",
         arrow: true,
-        children: /* @__PURE__ */ jsx8(
-          Box6,
+        children: /* @__PURE__ */ jsx18(
+          Box13,
           {
             component: "button",
             type: "button",
@@ -1889,7 +1910,7 @@ function PhaseCard({
             "aria-label": isViewed ? "Mark as not viewed" : "Mark as viewed",
             "aria-pressed": isViewed,
             sx: eyeButtonSx({ columnSide, isViewed, minSize: EYE_BUTTON_MIN_SIZE }),
-            children: /* @__PURE__ */ jsx8(
+            children: /* @__PURE__ */ jsx18(
               GiselleIcon,
               {
                 icon: isViewed ? "solar:eye-bold" : "solar:eye-outline",
@@ -1905,7 +1926,7 @@ function PhaseCard({
 }
 
 // src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
-import Box7 from "@mui/material/Box";
+import Box15 from "@mui/material/Box";
 
 // src/components/timeline/two-column/timeline-dot/timeline-dot.styles.ts
 var doneCheckmarkSx = (iconSize) => ({
@@ -1942,8 +1963,10 @@ var timelineDotInnerSx = (done, dotBg, effectiveColor, isMilestone, hasClickHand
   }
 });
 
-// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
-import { jsx as jsx9 } from "react/jsx-runtime";
+// src/components/timeline/two-column/timeline-dot/utils.ts
+function resolveEffectiveColor(color, done) {
+  return done ? "success" : color;
+}
 function getDotSize(isMilestone) {
   return isMilestone ? 34 : 42;
 }
@@ -1954,15 +1977,14 @@ function normaliseSx(sx) {
   if (!sx) return [];
   return Array.isArray(sx) ? sx : [sx];
 }
-function DotInner({
-  done,
-  icon,
-  animationKey,
-  iconSize
-}) {
+
+// src/components/timeline/two-column/timeline-dot/dot-inner.tsx
+import Box14 from "@mui/material/Box";
+import { jsx as jsx19 } from "react/jsx-runtime";
+function DotInner({ done, icon, animationKey, iconSize }) {
   if (done) {
-    return /* @__PURE__ */ jsx9(
-      Box7,
+    return /* @__PURE__ */ jsx19(
+      Box14,
       {
         component: "svg",
         viewBox: "0 0 24 24",
@@ -1972,13 +1994,13 @@ function DotInner({
         strokeLinecap: "round",
         strokeLinejoin: "round",
         sx: doneCheckmarkSx(iconSize),
-        children: /* @__PURE__ */ jsx9("polyline", { points: "20 6 9 17 4 12" })
+        children: /* @__PURE__ */ jsx19("polyline", { points: "20 6 9 17 4 12" })
       },
       animationKey
     );
   }
-  return /* @__PURE__ */ jsx9(
-    Box7,
+  return /* @__PURE__ */ jsx19(
+    Box14,
     {
       sx: {
         display: "flex",
@@ -1989,9 +2011,9 @@ function DotInner({
     animationKey
   );
 }
-function resolveEffectiveColor(color, done) {
-  return done ? "success" : color;
-}
+
+// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
+import { jsx as jsx20 } from "react/jsx-runtime";
 function TimelineDot({
   icon,
   color = "primary",
@@ -2018,8 +2040,8 @@ function TimelineDot({
     // Outer Box: controls size, position context, pulsing ::after ring, interaction.
     // overflow: visible is mandatory — the ring extends 5 px outside via inset: -5
     // and would be clipped by overflow: hidden.
-    /* @__PURE__ */ jsx9(
-      Box7,
+    /* @__PURE__ */ jsx20(
+      Box15,
       {
         className,
         role,
@@ -2066,7 +2088,7 @@ function TimelineDot({
           ] : [],
           ...normaliseSx(sx)
         ],
-        children: /* @__PURE__ */ jsx9(Box7, { sx: timelineDotInnerSx(done, dotBg, effectiveColor, isMilestone, !!onClick), children: /* @__PURE__ */ jsx9(DotInner, { done, icon, animationKey, iconSize }) })
+        children: /* @__PURE__ */ jsx20(Box15, { sx: timelineDotInnerSx(done, dotBg, effectiveColor, isMilestone, !!onClick), children: /* @__PURE__ */ jsx20(DotInner, { done, icon, animationKey, iconSize }) })
       }
     )
   );
@@ -2081,20 +2103,25 @@ import {
   useRef as useRef2,
   useLayoutEffect
 } from "react";
-import Box10 from "@mui/material/Box";
+import Box19 from "@mui/material/Box";
 import Timeline from "@mui/lab/Timeline";
-import Tooltip3 from "@mui/material/Tooltip";
-import Typography8 from "@mui/material/Typography";
+import Tooltip5 from "@mui/material/Tooltip";
+import Typography12 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/milestone-badge/milestone-badge.tsx
 import { useCallback as useCallback3, useState as useState3 } from "react";
-import Box8 from "@mui/material/Box";
+import Box16 from "@mui/material/Box";
 import Paper5 from "@mui/material/Paper";
 import Collapse2 from "@mui/material/Collapse";
-import Tooltip2 from "@mui/material/Tooltip";
-import Typography6 from "@mui/material/Typography";
+import Tooltip4 from "@mui/material/Tooltip";
+import Typography10 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/milestone-badge/milestone-badge.styles.ts
+var pillIconBoxSx2 = (iconSize) => ({
+  display: "inline-flex",
+  flexShrink: 0,
+  "& svg": { width: iconSize, height: iconSize }
+});
 var milestoneNewBadgeRowSx = (rightAlign) => ({
   display: "flex",
   alignItems: "center",
@@ -2207,15 +2234,51 @@ var taskToggleColorSx2 = (isDone) => ({
 var taskIconColorSx2 = (isDone) => ({
   color: isDone ? "success.main" : "text.disabled"
 });
+var milestonePaperSx = (opts) => (theme) => ({
+  p: 2,
+  overflow: "hidden",
+  borderTop: "3px solid",
+  borderTopColor: opts.isExpanded ? theme.vars.palette[opts.colorKey]?.main ?? theme.vars.palette.primary.main : "transparent",
+  bgcolor: opts.isExpanded ? "background.paper" : "transparent",
+  boxShadow: opts.isExpanded ? `0 4px 16px rgba(${theme.vars.palette[opts.colorKey]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.1)` : "none",
+  transition: "box-shadow 0.22s, opacity 0.3s, filter 0.3s, background-color 0.22s, border-color 0.22s",
+  ...opts.rightAlign && { textAlign: "right" },
+  ...opts.done && {
+    opacity: 0.45,
+    filter: "grayscale(1)",
+    pointerEvents: "auto"
+  },
+  ...!opts.isExpanded && {
+    "&:hover": {
+      bgcolor: "background.paper",
+      borderTopColor: theme.vars.palette[opts.colorKey]?.main ?? theme.vars.palette.primary.main,
+      boxShadow: `0 16px 40px rgba(${theme.vars.palette[opts.colorKey]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`,
+      ...opts.hasDetails && { cursor: "pointer" },
+      ...opts.done && { opacity: 1, filter: "none" }
+    }
+  },
+  ...opts.hasDetails && !opts.isExpanded && {
+    "&:focus-visible": {
+      bgcolor: "background.paper",
+      borderTopColor: theme.vars.palette[opts.colorKey]?.main ?? theme.vars.palette.primary.main,
+      outline: "2px solid",
+      outlineColor: theme.vars.palette[opts.colorKey]?.main ?? theme.vars.palette.primary.main,
+      outlineOffset: 3
+    }
+  },
+  ...opts.suppressElevation && { boxShadow: "none" }
+});
 
-// src/components/timeline/two-column/milestone-badge/milestone-badge.tsx
-import { jsx as jsx10, jsxs as jsxs7 } from "react/jsx-runtime";
+// src/components/timeline/two-column/milestone-badge/milestone-badge.const.ts
 var MILESTONE_DATE_FONT_SIZE = "0.875rem";
 var MILESTONE_PILL_ICON_SIZE = 16;
 var MILESTONE_PILL_TEXT_FONT_SIZE = "0.75rem";
 var MILESTONE_EYE_ICON_SIZE = 20;
 var MILESTONE_EYE_BUTTON_MIN_SIZE = 28;
 var MILESTONE_TASK_ICON_SIZE = 16;
+
+// src/components/timeline/two-column/milestone-badge/milestone-badge.tsx
+import { jsx as jsx21, jsxs as jsxs12 } from "react/jsx-runtime";
 function MilestoneBadge({
   milestone: m,
   done = false,
@@ -2254,7 +2317,7 @@ function MilestoneBadge({
     },
     [hasDetails, onRequestExpand]
   );
-  return /* @__PURE__ */ jsxs7(
+  return /* @__PURE__ */ jsxs12(
     Paper5,
     {
       ...other,
@@ -2267,67 +2330,24 @@ function MilestoneBadge({
       onMouseEnter: handleMouseEnter,
       onMouseLeave: handleMouseLeave,
       sx: [
-        (theme) => ({
-          p: 2,
-          overflow: "hidden",
-          // Default (collapsed): transparent — no background, border colour set to transparent
-          // so the 3px top border slot is reserved for a smooth colour transition on hover.
-          borderTop: "3px solid",
-          borderTopColor: isExpanded ? theme.vars.palette[colorKey]?.main ?? theme.vars.palette.primary.main : "transparent",
-          bgcolor: isExpanded ? "background.paper" : "transparent",
-          boxShadow: isExpanded ? `0 4px 16px rgba(${theme.vars.palette[colorKey]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.1)` : "none",
-          transition: "box-shadow 0.22s, opacity 0.3s, filter 0.3s, background-color 0.22s, border-color 0.22s",
-          ...rightAlign && { textAlign: "right" },
-          ...done && {
-            opacity: 0.45,
-            filter: "grayscale(1)",
-            // Override parent msCardWrapperSx pointerEvents:none (applied when another
-            // card is expanded/blurred). Done milestone cards must always be hoverable
-            // so the reader can temporarily restore full colour by hovering.
-            pointerEvents: "auto"
-          },
-          // Hover reveals the styled card for ALL milestones (title preview),
-          // but cursor:pointer only for expandable ones.
-          // Done cards also restore full opacity/filter on hover so the opaque
-          // background.paper is fully visible and doesn't bleed through.
-          ...!isExpanded && {
-            "&:hover": {
-              bgcolor: "background.paper",
-              borderTopColor: theme.vars.palette[colorKey]?.main ?? theme.vars.palette.primary.main,
-              boxShadow: `0 16px 40px rgba(${theme.vars.palette[colorKey]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.22)`,
-              ...hasDetails && { cursor: "pointer" },
-              ...done && { opacity: 1, filter: "none" }
-            }
-          },
-          ...hasDetails && !isExpanded && {
-            "&:focus-visible": {
-              bgcolor: "background.paper",
-              borderTopColor: theme.vars.palette[colorKey]?.main ?? theme.vars.palette.primary.main,
-              outline: "2px solid",
-              outlineColor: theme.vars.palette[colorKey]?.main ?? theme.vars.palette.primary.main,
-              outlineOffset: 3
-            }
-          },
-          // Flatten elevation when another card is expanded
-          ...suppressElevation && { boxShadow: "none" }
-        }),
+        milestonePaperSx({ isExpanded, colorKey, rightAlign, done, hasDetails, suppressElevation }),
         ...Array.isArray(sx) ? sx : [sx]
       ],
       children: [
-        m.new && /* @__PURE__ */ jsxs7(Box8, { sx: milestoneNewBadgeRowSx(rightAlign), children: [
-          /* @__PURE__ */ jsx10(Box8, { sx: milestoneNewDotSx }),
-          /* @__PURE__ */ jsx10(Typography6, { variant: "caption", sx: milestoneNewLabelSx, children: "New" })
+        m.new && /* @__PURE__ */ jsxs12(Box16, { sx: milestoneNewBadgeRowSx(rightAlign), children: [
+          /* @__PURE__ */ jsx21(Box16, { sx: milestoneNewDotSx }),
+          /* @__PURE__ */ jsx21(Typography10, { variant: "caption", sx: milestoneNewLabelSx, children: "New" })
         ] }),
-        m.date && /* @__PURE__ */ jsx10(Typography6, { variant: "caption", sx: milestoneDateSx(MILESTONE_DATE_FONT_SIZE), children: m.date }),
-        /* @__PURE__ */ jsxs7(Box8, { sx: milestoneTitleRowSx(rightAlign), children: [
-          onMarkViewed && /* @__PURE__ */ jsx10(
-            Tooltip2,
+        m.date && /* @__PURE__ */ jsx21(Typography10, { variant: "caption", sx: milestoneDateSx(MILESTONE_DATE_FONT_SIZE), children: m.date }),
+        /* @__PURE__ */ jsxs12(Box16, { sx: milestoneTitleRowSx(rightAlign), children: [
+          onMarkViewed && /* @__PURE__ */ jsx21(
+            Tooltip4,
             {
               title: isViewed ? "Mark as not viewed" : "Mark as viewed",
               placement: rightAlign ? "right" : "left",
               arrow: true,
-              children: /* @__PURE__ */ jsx10(
-                Box8,
+              children: /* @__PURE__ */ jsx21(
+                Box16,
                 {
                   component: "button",
                   type: "button",
@@ -2341,7 +2361,7 @@ function MilestoneBadge({
                     isViewed: !!isViewed,
                     minSize: MILESTONE_EYE_BUTTON_MIN_SIZE
                   }),
-                  children: /* @__PURE__ */ jsx10(
+                  children: /* @__PURE__ */ jsx21(
                     GiselleIcon,
                     {
                       icon: isViewed ? "solar:eye-bold" : "solar:eye-outline",
@@ -2353,29 +2373,18 @@ function MilestoneBadge({
               )
             }
           ),
-          /* @__PURE__ */ jsx10(Typography6, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle })
+          /* @__PURE__ */ jsx21(Typography10, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle })
         ] }),
-        (isExpanded || isHovered) && m.description && /* @__PURE__ */ jsx10(Typography6, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: m.description }),
-        hasDetails && /* @__PURE__ */ jsxs7(
-          Box8,
+        (isExpanded || isHovered) && m.description && /* @__PURE__ */ jsx21(Typography10, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: m.description }),
+        hasDetails && /* @__PURE__ */ jsxs12(
+          Box16,
           {
             sx: milestoneDetailPillSx,
             "aria-label": `${taskChildren.length} expandable detail${taskChildren.length === 1 ? "" : "s"}`,
             children: [
-              /* @__PURE__ */ jsx10(
-                Box8,
-                {
-                  component: "span",
-                  sx: {
-                    display: "inline-flex",
-                    flexShrink: 0,
-                    "& svg": { width: MILESTONE_PILL_ICON_SIZE, height: MILESTONE_PILL_ICON_SIZE }
-                  },
-                  children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON
-                }
-              ),
-              /* @__PURE__ */ jsx10(
-                Typography6,
+              /* @__PURE__ */ jsx21(Box16, { component: "span", sx: pillIconBoxSx2(MILESTONE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
+              /* @__PURE__ */ jsx21(
+                Typography10,
                 {
                   component: "span",
                   variant: "caption",
@@ -2386,19 +2395,19 @@ function MilestoneBadge({
             ]
           }
         ),
-        hasDetails && /* @__PURE__ */ jsx10(Collapse2, { in: isExpanded, timeout: 50, children: /* @__PURE__ */ jsx10(Box8, { id: detailsId, sx: milestoneDetailListSx, children: taskChildren.map((task, i) => {
+        hasDetails && /* @__PURE__ */ jsx21(Collapse2, { in: isExpanded, timeout: 50, children: /* @__PURE__ */ jsx21(Box16, { id: detailsId, sx: milestoneDetailListSx, children: taskChildren.map((task, i) => {
           const isDoneTask = taskDoneStates ? taskDoneStates[i] ?? false : task.done ?? false;
           const toggleLabel = isDoneTask ? `Mark "${task.title}" as not done` : `Mark "${task.title}" as done`;
-          return /* @__PURE__ */ jsxs7(Box8, { sx: taskRowSx2, children: [
-            /* @__PURE__ */ jsx10(
-              Box8,
+          return /* @__PURE__ */ jsxs12(Box16, { sx: taskRowSx2, children: [
+            /* @__PURE__ */ jsx21(
+              Box16,
               {
                 component: onToggleTask ? "button" : "span",
                 "aria-label": onToggleTask ? toggleLabel : void 0,
                 "aria-pressed": onToggleTask ? isDoneTask : void 0,
                 onClick: onToggleTask ? () => onToggleTask(i, !isDoneTask) : void 0,
                 sx: onToggleTask ? [taskToggleButtonSx2, taskToggleColorSx2(isDoneTask)] : [taskIconStaticSx2, taskIconColorSx2(isDoneTask)],
-                children: /* @__PURE__ */ jsx10(
+                children: /* @__PURE__ */ jsx21(
                   GiselleIcon,
                   {
                     icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
@@ -2407,7 +2416,7 @@ function MilestoneBadge({
                 )
               }
             ),
-            /* @__PURE__ */ jsx10(Typography6, { variant: "body2", sx: taskTitleSx2(isDoneTask), children: task.title })
+            /* @__PURE__ */ jsx21(Typography10, { variant: "body2", sx: taskTitleSx2(isDoneTask), children: task.title })
           ] }, i);
         }) }) })
       ]
@@ -2416,8 +2425,8 @@ function MilestoneBadge({
 }
 
 // src/components/timeline/two-column/spine-connector/spine-connector.tsx
-import Box9 from "@mui/material/Box";
-import Typography7 from "@mui/material/Typography";
+import Box17 from "@mui/material/Box";
+import Typography11 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/spine-connector/spine-connector.styles.ts
 var yearLabelSx = (marginBottom) => ({
@@ -2442,7 +2451,7 @@ var yearLabelSx = (marginBottom) => ({
 });
 
 // src/components/timeline/two-column/spine-connector/spine-connector.tsx
-import { jsx as jsx11 } from "react/jsx-runtime";
+import { jsx as jsx22 } from "react/jsx-runtime";
 function SpineConnector({
   dotColor,
   yearMilestone,
@@ -2450,8 +2459,8 @@ function SpineConnector({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx11(
-    Box9,
+  return /* @__PURE__ */ jsx22(
+    Box17,
     {
       ...other,
       sx: [
@@ -2465,10 +2474,13 @@ function SpineConnector({
         }),
         ...Array.isArray(sx) ? sx : [sx]
       ],
-      children: yearMilestone && /* @__PURE__ */ jsx11(Typography7, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
+      children: yearMilestone && /* @__PURE__ */ jsx22(Typography11, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
     }
   );
 }
+
+// src/components/timeline/two-column/timeline-column.tsx
+import Box18 from "@mui/material/Box";
 
 // src/components/timeline/two-column/two-column.styles.ts
 var timelineColumnSx = (columnSide, hasContent, bottomPadding) => ({
@@ -2620,12 +2632,20 @@ var markerDateSpanSx = {
   opacity: 0.7
 };
 
-// src/components/timeline/two-column/two-column.tsx
-import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
-var useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect2;
-function TimelineColumn({ columnSide, hasContent, children, bottomPadding }) {
-  return /* @__PURE__ */ jsx12(Box10, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
+// src/components/timeline/two-column/timeline-column.tsx
+import { jsx as jsx23 } from "react/jsx-runtime";
+function TimelineColumn({
+  columnSide,
+  hasContent,
+  children,
+  bottomPadding
+}) {
+  return /* @__PURE__ */ jsx23(Box18, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
 }
+
+// src/components/timeline/two-column/two-column.tsx
+import { jsx as jsx24, jsxs as jsxs13 } from "react/jsx-runtime";
+var useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect2;
 var EMPTY_VIEWED_KEYS = /* @__PURE__ */ new Set();
 function buildMilestoneRow(ms, mi, totalMilestones, ctx) {
   const { msDone, msColor } = resolveMilestoneState(
@@ -2656,15 +2676,15 @@ function buildMilestoneRow(ms, mi, totalMilestones, ctx) {
     "aria-label": msDotAriaLabel,
     tabIndex: 0
   } : {};
-  return /* @__PURE__ */ jsxs8(Box10, { sx: msRowSx(topPercent), children: [
-    /* @__PURE__ */ jsx12(Box10, { "data-col": "left", sx: msColumnBoxSx(effectiveMsSide === "left"), children: effectiveMsSide === "left" && /* @__PURE__ */ jsx12(
-      Box10,
+  return /* @__PURE__ */ jsxs13(Box19, { sx: msRowSx(topPercent), children: [
+    /* @__PURE__ */ jsx24(Box19, { "data-col": "left", sx: msColumnBoxSx(effectiveMsSide === "left"), children: effectiveMsSide === "left" && /* @__PURE__ */ jsx24(
+      Box19,
       {
         "data-ms-card": "true",
         ref: (el) => ctx.onMeasure(mi, el),
         onClick: stopProp,
         sx: msCardWrapperSx(isThisMsExpanded, suppressElevation, "left"),
-        children: /* @__PURE__ */ jsx12(
+        children: /* @__PURE__ */ jsx24(
           MilestoneBadge,
           {
             milestone: ms,
@@ -2685,15 +2705,15 @@ function buildMilestoneRow(ms, mi, totalMilestones, ctx) {
         )
       }
     ) }),
-    /* @__PURE__ */ jsx12(Box10, { "data-col": "center", sx: centerColumnSx, children: /* @__PURE__ */ jsxs8(Box10, { sx: msDotWrapperSx(suppressElevation), children: [
-      ms.date && /* @__PURE__ */ jsx12(Typography8, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: ms.date }),
-      /* @__PURE__ */ jsx12(
-        Tooltip3,
+    /* @__PURE__ */ jsx24(Box19, { "data-col": "center", sx: centerColumnSx, children: /* @__PURE__ */ jsxs13(Box19, { sx: msDotWrapperSx(suppressElevation), children: [
+      ms.date && /* @__PURE__ */ jsx24(Typography12, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: ms.date }),
+      /* @__PURE__ */ jsx24(
+        Tooltip5,
         {
           title: resolveMilestoneTooltip(ctx.checklist, msColor, msDone, ms),
           placement: "top",
           arrow: true,
-          children: /* @__PURE__ */ jsx12("span", { children: /* @__PURE__ */ jsx12(
+          children: /* @__PURE__ */ jsx24("span", { children: /* @__PURE__ */ jsx24(
             TimelineDot,
             {
               icon: ms.icon,
@@ -2709,14 +2729,14 @@ function buildMilestoneRow(ms, mi, totalMilestones, ctx) {
         }
       )
     ] }) }),
-    /* @__PURE__ */ jsx12(Box10, { "data-col": "right", sx: msColumnBoxSx(effectiveMsSide === "right"), children: effectiveMsSide === "right" && /* @__PURE__ */ jsx12(
-      Box10,
+    /* @__PURE__ */ jsx24(Box19, { "data-col": "right", sx: msColumnBoxSx(effectiveMsSide === "right"), children: effectiveMsSide === "right" && /* @__PURE__ */ jsx24(
+      Box19,
       {
         "data-ms-card": "true",
         ref: (el) => ctx.onMeasure(mi, el),
         onClick: stopProp,
         sx: msCardWrapperSx(isThisMsExpanded, suppressElevation, "right"),
-        children: /* @__PURE__ */ jsx12(
+        children: /* @__PURE__ */ jsx24(
           MilestoneBadge,
           {
             milestone: ms,
@@ -2953,20 +2973,20 @@ function TimelineTwoColumn({
     });
   }, [sorted]);
   const effectiveViewedKeys = viewedKeys ?? EMPTY_VIEWED_KEYS;
-  return /* @__PURE__ */ jsx12(Box10, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: /* @__PURE__ */ jsx12(Timeline, { sx: timelineRootSx, children: sorted.map((phase, i) => {
+  return /* @__PURE__ */ jsx24(Box19, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: /* @__PURE__ */ jsx24(Timeline, { sx: timelineRootSx, children: sorted.map((phase, i) => {
     const { isDone, isOverdue, dotColor, yearLabelValue, phaseMilestones, isLastPhase } = resolvePhaseState(phase, i, sorted, lastKey, checklist, localPhaseDone, today);
     if (phase.variant === "marker") {
       const markerTooltip = resolvePhaseTooltip(checklist, dotColor, isDone, phase);
-      return /* @__PURE__ */ jsx12(Box10, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, children: /* @__PURE__ */ jsxs8(Box10, { sx: markerRowInnerSx, children: [
-        /* @__PURE__ */ jsx12(Box10, { sx: markerLeftLabelSx, children: phase.side === "left" && /* @__PURE__ */ jsxs8(Typography8, { variant: "caption", sx: markerCaptionSx, children: [
+      return /* @__PURE__ */ jsx24(Box19, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, children: /* @__PURE__ */ jsxs13(Box19, { sx: markerRowInnerSx, children: [
+        /* @__PURE__ */ jsx24(Box19, { sx: markerLeftLabelSx, children: phase.side === "left" && /* @__PURE__ */ jsxs13(Typography12, { variant: "caption", sx: markerCaptionSx, children: [
           phase.shortTitle ?? phase.title,
-          phase.date && /* @__PURE__ */ jsxs8(Box10, { component: "span", sx: markerDateSpanSx, children: [
+          phase.date && /* @__PURE__ */ jsxs13(Box19, { component: "span", sx: markerDateSpanSx, children: [
             "\xB7 ",
             phase.date
           ] })
         ] }) }),
-        /* @__PURE__ */ jsxs8(Box10, { "data-col": "center", sx: markerCenterSx, children: [
-          /* @__PURE__ */ jsx12(Tooltip3, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ jsx12("span", { children: /* @__PURE__ */ jsx12(
+        /* @__PURE__ */ jsxs13(Box19, { "data-col": "center", sx: markerCenterSx, children: [
+          /* @__PURE__ */ jsx24(Tooltip5, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ jsx24("span", { children: /* @__PURE__ */ jsx24(
             TimelineDot,
             {
               icon: phase.icon,
@@ -2975,11 +2995,11 @@ function TimelineTwoColumn({
               done: isDone
             }
           ) }) }),
-          !isLastPhase && /* @__PURE__ */ jsx12(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
+          !isLastPhase && /* @__PURE__ */ jsx24(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
         ] }),
-        /* @__PURE__ */ jsx12(Box10, { sx: markerRightLabelSx, children: phase.side !== "left" && /* @__PURE__ */ jsxs8(Typography8, { variant: "caption", sx: markerCaptionSx, children: [
+        /* @__PURE__ */ jsx24(Box19, { sx: markerRightLabelSx, children: phase.side !== "left" && /* @__PURE__ */ jsxs13(Typography12, { variant: "caption", sx: markerCaptionSx, children: [
           phase.shortTitle ?? phase.title,
-          phase.date && /* @__PURE__ */ jsxs8(Box10, { component: "span", sx: markerDateSpanSx, children: [
+          phase.date && /* @__PURE__ */ jsxs13(Box19, { component: "span", sx: markerDateSpanSx, children: [
             "\xB7 ",
             phase.date
           ] })
@@ -2996,7 +3016,7 @@ function TimelineTwoColumn({
     const expandedMiIdx = expandedMilestoneMap[String(phase.key)] ?? null;
     const isThisPhaseExpanded = expandedPhaseKey === phase.key;
     const phaseViewKey = `phase-${phase.key}`;
-    const phaseCardNode = /* @__PURE__ */ jsx12(Box10, { onClick: stopCardPropagation, children: /* @__PURE__ */ jsx12(
+    const phaseCardNode = /* @__PURE__ */ jsx24(Box19, { onClick: stopCardPropagation, children: /* @__PURE__ */ jsx24(
       PhaseCard,
       {
         phase,
@@ -3053,8 +3073,8 @@ function TimelineTwoColumn({
       yearLabelMarginBottom + 80
     ) : Math.max(milestoneSlotHeight, msSlotHeights[String(phase.key)] ?? 0)) : void 0;
     rows.push(
-      /* @__PURE__ */ jsxs8(Box10, { sx: phaseRowSx(anyExpanded && expandedPhaseKey !== phase.key), children: [
-        /* @__PURE__ */ jsx12(
+      /* @__PURE__ */ jsxs13(Box19, { sx: phaseRowSx(anyExpanded && expandedPhaseKey !== phase.key), children: [
+        /* @__PURE__ */ jsx24(
           TimelineColumn,
           {
             columnSide: "left",
@@ -3063,16 +3083,16 @@ function TimelineTwoColumn({
             children: phase.side === "left" && phaseCardNode
           }
         ),
-        /* @__PURE__ */ jsxs8(Box10, { "data-col": "center", sx: centerColumnSx, children: [
-          /* @__PURE__ */ jsxs8(Box10, { sx: { position: "relative", display: "inline-flex" }, children: [
-            !phase.hideDate && phase.date && /* @__PURE__ */ jsx12(Typography8, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
-            /* @__PURE__ */ jsx12(
-              Tooltip3,
+        /* @__PURE__ */ jsxs13(Box19, { "data-col": "center", sx: centerColumnSx, children: [
+          /* @__PURE__ */ jsxs13(Box19, { sx: { position: "relative", display: "inline-flex" }, children: [
+            !phase.hideDate && phase.date && /* @__PURE__ */ jsx24(Typography12, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
+            /* @__PURE__ */ jsx24(
+              Tooltip5,
               {
                 title: resolvePhaseTooltip(checklist, dotColor, isDone, phase),
                 placement: "top",
                 arrow: true,
-                children: /* @__PURE__ */ jsx12("span", { children: /* @__PURE__ */ jsx12(
+                children: /* @__PURE__ */ jsx24("span", { children: /* @__PURE__ */ jsx24(
                   TimelineDot,
                   {
                     icon: phase.icon,
@@ -3093,7 +3113,7 @@ function TimelineTwoColumn({
               }
             )
           ] }),
-          !isLastPhase && /* @__PURE__ */ jsx12(
+          !isLastPhase && /* @__PURE__ */ jsx24(
             SpineConnector,
             {
               dotColor,
@@ -3102,7 +3122,7 @@ function TimelineTwoColumn({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx12(
+        /* @__PURE__ */ jsx24(
           TimelineColumn,
           {
             columnSide: "right",
@@ -3116,8 +3136,8 @@ function TimelineTwoColumn({
     phaseMilestones.forEach((ms, mi) => {
       rows.push(buildMilestoneRow(ms, mi, phaseMilestones.length, milestoneCtx));
     });
-    return /* @__PURE__ */ jsx12(
-      Box10,
+    return /* @__PURE__ */ jsx24(
+      Box19,
       {
         component: "li",
         "data-testid": "tl-item",
@@ -3133,8 +3153,8 @@ function TimelineTwoColumn({
 }
 
 // src/components/action-bar/icon/icon-action-bar.tsx
-import Box11 from "@mui/material/Box";
-import Tooltip4 from "@mui/material/Tooltip";
+import Box20 from "@mui/material/Box";
+import Tooltip6 from "@mui/material/Tooltip";
 import IconButton2 from "@mui/material/IconButton";
 
 // src/components/action-bar/icon/icon-action-bar.styles.ts
@@ -3145,21 +3165,24 @@ var iconActionBarRootSx = {
   display: "flex"
 };
 
-// src/components/action-bar/icon/icon-action-bar.tsx
-import { jsx as jsx13 } from "react/jsx-runtime";
+// src/components/action-bar/icon/icon-action-bar.const.tsx
+import { jsx as jsx25 } from "react/jsx-runtime";
 var DEFAULT_ICON_ACTIONS = [
-  { tooltip: "Edit", icon: /* @__PURE__ */ jsx13(GiselleIcon, { icon: "solar:pen-bold" }) },
-  { tooltip: "View", icon: /* @__PURE__ */ jsx13(GiselleIcon, { icon: "solar:eye-bold" }) },
-  { tooltip: "Print", icon: /* @__PURE__ */ jsx13(GiselleIcon, { icon: "solar:printer-minimalistic-bold" }) },
-  { tooltip: "Send", icon: /* @__PURE__ */ jsx13(GiselleIcon, { icon: "mdi:email" }) },
-  { tooltip: "Share", icon: /* @__PURE__ */ jsx13(GiselleIcon, { icon: "solar:share-bold" }) }
+  { tooltip: "Edit", icon: /* @__PURE__ */ jsx25(GiselleIcon, { icon: "solar:pen-bold" }) },
+  { tooltip: "View", icon: /* @__PURE__ */ jsx25(GiselleIcon, { icon: "solar:eye-bold" }) },
+  { tooltip: "Print", icon: /* @__PURE__ */ jsx25(GiselleIcon, { icon: "solar:printer-minimalistic-bold" }) },
+  { tooltip: "Send", icon: /* @__PURE__ */ jsx25(GiselleIcon, { icon: "mdi:email" }) },
+  { tooltip: "Share", icon: /* @__PURE__ */ jsx25(GiselleIcon, { icon: "solar:share-bold" }) }
 ];
+
+// src/components/action-bar/icon/icon-action-bar.tsx
+import { jsx as jsx26 } from "react/jsx-runtime";
 function IconActionBar({
   actions = DEFAULT_ICON_ACTIONS,
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx13(Box11, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
+  return /* @__PURE__ */ jsx26(Box20, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
     const label = item["aria-label"] ?? item.tooltip;
     const buttonProps = {
       onClick: item.onClick,
@@ -3168,12 +3191,12 @@ function IconActionBar({
       ...item.component !== void 0 && { component: item.component },
       ...item.href !== void 0 && { href: item.href }
     };
-    return /* @__PURE__ */ jsx13(
-      Tooltip4,
+    return /* @__PURE__ */ jsx26(
+      Tooltip6,
       {
         title: item.tooltip,
         placement: item.tooltipPlacement ?? "bottom",
-        children: /* @__PURE__ */ jsx13("span", { children: /* @__PURE__ */ jsx13(IconButton2, { ...buttonProps, children: item.icon }) })
+        children: /* @__PURE__ */ jsx26("span", { children: /* @__PURE__ */ jsx26(IconButton2, { ...buttonProps, children: item.icon }) })
       },
       `${item.tooltip}-${index}`
     );
@@ -3181,11 +3204,11 @@ function IconActionBar({
 }
 
 // src/components/layout/two-column-showcase-row/two-column-showcase-row.tsx
-import Box12 from "@mui/material/Box";
+import Box21 from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import Stack2 from "@mui/material/Stack";
-import Typography9 from "@mui/material/Typography";
-import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+import Typography13 from "@mui/material/Typography";
+import { jsx as jsx27, jsxs as jsxs14 } from "react/jsx-runtime";
 function TwoColumnShowcaseRow({
   text,
   controls,
@@ -3198,7 +3221,7 @@ function TwoColumnShowcaseRow({
 }) {
   const isVertical = orientation === "column" || orientation === "column-reverse";
   const itemSize = isVertical ? { xs: 12 } : { xs: 12, md: 6 };
-  return /* @__PURE__ */ jsxs9(
+  return /* @__PURE__ */ jsxs14(
     Grid,
     {
       container: true,
@@ -3208,19 +3231,19 @@ function TwoColumnShowcaseRow({
       sx: [{}, ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children: [
-        text && /* @__PURE__ */ jsx14(Grid, { size: itemSize, children: /* @__PURE__ */ jsxs9(
+        text && /* @__PURE__ */ jsx27(Grid, { size: itemSize, children: /* @__PURE__ */ jsxs14(
           Stack2,
           {
             spacing: 2,
             sx: [{ maxWidth: 520 }, ...Array.isArray(textSx) ? textSx : [textSx]],
             children: [
-              text.overline && /* @__PURE__ */ jsx14(Typography9, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
-              text.heading && /* @__PURE__ */ jsx14(Typography9, { variant: "h4", children: text.heading }),
-              text.description && /* @__PURE__ */ jsx14(Typography9, { variant: "body1", color: "text.secondary", children: text.description })
+              text.overline && /* @__PURE__ */ jsx27(Typography13, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
+              text.heading && /* @__PURE__ */ jsx27(Typography13, { variant: "h4", children: text.heading }),
+              text.description && /* @__PURE__ */ jsx27(Typography13, { variant: "body1", color: "text.secondary", children: text.description })
             ]
           }
         ) }),
-        /* @__PURE__ */ jsx14(Grid, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx27(Grid, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ jsx27(
           Stack2,
           {
             spacing: 2,
@@ -3228,7 +3251,7 @@ function TwoColumnShowcaseRow({
               { alignItems: controlsAlign, width: 1, minWidth: 0 },
               ...Array.isArray(controlsSx) ? controlsSx : [controlsSx]
             ],
-            children: /* @__PURE__ */ jsx14(Box12, { sx: { width: 1, minWidth: 0 }, children: controls })
+            children: /* @__PURE__ */ jsx27(Box21, { sx: { width: 1, minWidth: 0 }, children: controls })
           }
         ) })
       ]
@@ -3237,8 +3260,8 @@ function TwoColumnShowcaseRow({
 }
 
 // src/components/layout/section-title/section-title.tsx
-import Box13 from "@mui/material/Box";
-import Typography10 from "@mui/material/Typography";
+import Box23 from "@mui/material/Box";
+import Typography14 from "@mui/material/Typography";
 
 // src/components/layout/section-title/section-title.styles.ts
 var txtGradientSpanSx = (theme) => ({
@@ -3251,53 +3274,12 @@ var txtGradientSpanSx = (theme) => ({
   color: "transparent"
 });
 
-// src/components/layout/section-title/section-title.tsx
-import { jsx as jsx15, jsxs as jsxs10 } from "react/jsx-runtime";
-function SectionTitle({
-  sx,
-  title,
-  caption,
-  slotProps,
-  txtGradient,
-  description,
-  ...other
-}) {
-  return /* @__PURE__ */ jsxs10(
-    Box13,
-    {
-      sx: [
-        {
-          gap: 3,
-          display: "flex",
-          flexDirection: "column"
-        },
-        ...Array.isArray(sx) ? sx : [sx]
-      ],
-      ...other,
-      children: [
-        caption && /* @__PURE__ */ jsx15(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
-        /* @__PURE__ */ jsxs10(Typography10, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
-          title,
-          " ",
-          txtGradient && /* @__PURE__ */ jsx15(Box13, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
-        ] }),
-        description && /* @__PURE__ */ jsx15(
-          Box13,
-          {
-            sx: [
-              { color: "text.secondary", typography: "body1" },
-              ...Array.isArray(slotProps?.description?.sx) ? slotProps.description.sx : [slotProps?.description?.sx]
-            ],
-            children: description
-          }
-        )
-      ]
-    }
-  );
-}
+// src/components/layout/section-title/section-caption.tsx
+import Box22 from "@mui/material/Box";
+import { jsx as jsx28 } from "react/jsx-runtime";
 function SectionCaption({ title, sx, ...other }) {
-  return /* @__PURE__ */ jsx15(
-    Box13,
+  return /* @__PURE__ */ jsx28(
+    Box22,
     {
       component: "span",
       sx: [
@@ -3313,13 +3295,55 @@ function SectionCaption({ title, sx, ...other }) {
   );
 }
 
+// src/components/layout/section-title/section-title.tsx
+import { jsx as jsx29, jsxs as jsxs15 } from "react/jsx-runtime";
+function SectionTitle({
+  sx,
+  title,
+  caption,
+  slotProps,
+  txtGradient,
+  description,
+  ...other
+}) {
+  return /* @__PURE__ */ jsxs15(
+    Box23,
+    {
+      sx: [
+        {
+          gap: 3,
+          display: "flex",
+          flexDirection: "column"
+        },
+        ...Array.isArray(sx) ? sx : [sx]
+      ],
+      ...other,
+      children: [
+        caption && /* @__PURE__ */ jsx29(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
+        /* @__PURE__ */ jsxs15(Typography14, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
+          title,
+          " ",
+          txtGradient && /* @__PURE__ */ jsx29(Box23, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
+        ] }),
+        description && /* @__PURE__ */ jsx29(
+          Box23,
+          {
+            sx: [
+              { color: "text.secondary", typography: "body1" },
+              ...Array.isArray(slotProps?.description?.sx) ? slotProps.description.sx : [slotProps?.description?.sx]
+            ],
+            children: description
+          }
+        )
+      ]
+    }
+  );
+}
+
 // src/components/nav/floating-sub-nav/floating-sub-nav.tsx
-import { useCallback as useCallback5 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Box14 from "@mui/material/Box";
-import Stack3 from "@mui/material/Stack";
-import Tooltip5 from "@mui/material/Tooltip";
-import ButtonBase2 from "@mui/material/ButtonBase";
+import { useCallback as useCallback6 } from "react";
+import { AnimatePresence } from "framer-motion";
+import Box24 from "@mui/material/Box";
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.styles.ts
 var grey500Ch = (theme) => theme.vars.palette.grey["500Channel"];
@@ -3404,52 +3428,18 @@ var subNavButtonSx = (isActive) => (theme) => ({
   }
 });
 
-// src/components/nav/floating-sub-nav/floating-sub-nav.tsx
-import { jsx as jsx16 } from "react/jsx-runtime";
-function NavPill({
-  items,
-  activeId,
-  onPress
-}) {
-  return /* @__PURE__ */ jsx16(
-    motion.div,
-    {
-      initial: { opacity: 0, y: 20 },
-      animate: { opacity: 1, y: 0 },
-      exit: { opacity: 0, y: 10 },
-      transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
-      children: /* @__PURE__ */ jsx16(
-        Stack3,
-        {
-          direction: "column",
-          alignItems: "center",
-          role: "navigation",
-          "aria-label": "Section navigation",
-          sx: pillSx,
-          children: /* @__PURE__ */ jsx16(Stack3, { direction: "row", spacing: 0.5, children: items.map((item) => /* @__PURE__ */ jsx16(
-            SubNavButton,
-            {
-              item,
-              isActive: activeId === item.id,
-              onPress
-            },
-            item.id
-          )) })
-        }
-      )
-    }
-  );
-}
-function FloatingSubNav({ items, activeId, onSelect, sticky = false }) {
-  const handlePress = useCallback5((id) => onSelect(id), [onSelect]);
-  if (sticky) {
-    return /* @__PURE__ */ jsx16(Box14, { sx: stickyWrapperSx, children: /* @__PURE__ */ jsx16(Box14, { sx: stickyInnerSx, children: /* @__PURE__ */ jsx16(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx16(NavPill, { items, activeId, onPress: handlePress }) }) }) });
-  }
-  return /* @__PURE__ */ jsx16(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx16(Box14, { sx: fixedWrapperSx, children: /* @__PURE__ */ jsx16(NavPill, { items, activeId, onPress: handlePress }) }) });
-}
+// src/components/nav/floating-sub-nav/nav-pill.tsx
+import { motion } from "framer-motion";
+import Stack3 from "@mui/material/Stack";
+
+// src/components/nav/floating-sub-nav/sub-nav-button.tsx
+import { useCallback as useCallback5 } from "react";
+import Tooltip7 from "@mui/material/Tooltip";
+import ButtonBase2 from "@mui/material/ButtonBase";
+import { jsx as jsx30 } from "react/jsx-runtime";
 function SubNavButton({ item, isActive, onPress }) {
   const handleClick = useCallback5(() => onPress(item.id), [onPress, item.id]);
-  return /* @__PURE__ */ jsx16(Tooltip5, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx30(Tooltip7, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ jsx30(
     ButtonBase2,
     {
       disableRipple: true,
@@ -3464,9 +3454,52 @@ function SubNavButton({ item, isActive, onPress }) {
   ) });
 }
 
+// src/components/nav/floating-sub-nav/nav-pill.tsx
+import { jsx as jsx31 } from "react/jsx-runtime";
+function NavPill({ items, activeId, onPress }) {
+  return /* @__PURE__ */ jsx31(
+    motion.div,
+    {
+      initial: { opacity: 0, y: 20 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: 10 },
+      transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
+      children: /* @__PURE__ */ jsx31(
+        Stack3,
+        {
+          direction: "column",
+          alignItems: "center",
+          role: "navigation",
+          "aria-label": "Section navigation",
+          sx: pillSx,
+          children: /* @__PURE__ */ jsx31(Stack3, { direction: "row", spacing: 0.5, children: items.map((item) => /* @__PURE__ */ jsx31(
+            SubNavButton,
+            {
+              item,
+              isActive: activeId === item.id,
+              onPress
+            },
+            item.id
+          )) })
+        }
+      )
+    }
+  );
+}
+
+// src/components/nav/floating-sub-nav/floating-sub-nav.tsx
+import { jsx as jsx32 } from "react/jsx-runtime";
+function FloatingSubNav({ items, activeId, onSelect, sticky = false }) {
+  const handlePress = useCallback6((id) => onSelect(id), [onSelect]);
+  if (sticky) {
+    return /* @__PURE__ */ jsx32(Box24, { sx: stickyWrapperSx, children: /* @__PURE__ */ jsx32(Box24, { sx: stickyInnerSx, children: /* @__PURE__ */ jsx32(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx32(NavPill, { items, activeId, onPress: handlePress }) }) }) });
+  }
+  return /* @__PURE__ */ jsx32(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx32(Box24, { sx: fixedWrapperSx, children: /* @__PURE__ */ jsx32(NavPill, { items, activeId, onPress: handlePress }) }) });
+}
+
 // src/components/layout/section-container/section-container.tsx
 import Container from "@mui/material/Container";
-import { jsx as jsx17 } from "react/jsx-runtime";
+import { jsx as jsx33 } from "react/jsx-runtime";
 function SectionContainer({
   children,
   maxWidth = "lg",
@@ -3474,7 +3507,7 @@ function SectionContainer({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx17(Container, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
+  return /* @__PURE__ */ jsx33(Container, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
 }
 
 // src/utils/maturity-utils.ts
@@ -3512,8 +3545,8 @@ import Card2 from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CardHeader from "@mui/material/CardHeader";
 import Divider2 from "@mui/material/Divider";
-import Box15 from "@mui/material/Box";
-import Typography11 from "@mui/material/Typography";
+import Box25 from "@mui/material/Box";
+import Typography15 from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 
 // src/components/chart/radial-progress/radial-progress-card.styles.ts
@@ -3598,7 +3631,7 @@ var legendDotSx = (color) => ({
 });
 
 // src/components/chart/radial-progress/radial-progress-card.tsx
-import { jsx as jsx18, jsxs as jsxs11 } from "react/jsx-runtime";
+import { jsx as jsx34, jsxs as jsxs16 } from "react/jsx-runtime";
 var ReactApexChart = lazy(() => import("react-apexcharts"));
 function RadialProgressCard({
   title,
@@ -3621,10 +3654,10 @@ function RadialProgressCard({
     () => buildRadialProgressOptions(theme, chartLabels, resolvedColors, total, totalLabel),
     [theme, chartLabels, resolvedColors, total, totalLabel]
   );
-  return /* @__PURE__ */ jsxs11(Card2, { sx: [{}, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    (title !== void 0 || subheader !== void 0) && /* @__PURE__ */ jsx18(CardHeader, { title, subheader }),
-    /* @__PURE__ */ jsxs11(CardContent, { children: [
-      /* @__PURE__ */ jsx18(Box15, { sx: chartWrapSx, children: /* @__PURE__ */ jsx18(Suspense, { fallback: /* @__PURE__ */ jsx18(Box15, { sx: { height: chartHeight } }), children: /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsxs16(Card2, { sx: [{}, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    (title !== void 0 || subheader !== void 0) && /* @__PURE__ */ jsx34(CardHeader, { title, subheader }),
+    /* @__PURE__ */ jsxs16(CardContent, { children: [
+      /* @__PURE__ */ jsx34(Box25, { sx: chartWrapSx, children: /* @__PURE__ */ jsx34(Suspense, { fallback: /* @__PURE__ */ jsx34(Box25, { sx: { height: chartHeight } }), children: /* @__PURE__ */ jsx34(
         ReactApexChart,
         {
           type: "radialBar",
@@ -3634,11 +3667,11 @@ function RadialProgressCard({
           height: chartHeight
         }
       ) }) }),
-      /* @__PURE__ */ jsx18(Divider2, { sx: { my: 2 } }),
-      /* @__PURE__ */ jsx18(Box15, { sx: legendRowSx, children: series.map((item, i) => /* @__PURE__ */ jsxs11(Box15, { sx: legendItemSx, children: [
-        /* @__PURE__ */ jsx18(Box15, { sx: legendDotSx(resolvedColors[i] ?? theme.palette.primary.main) }),
-        /* @__PURE__ */ jsx18(Typography11, { variant: "subtitle2", children: item.label }),
-        /* @__PURE__ */ jsxs11(Typography11, { variant: "caption", sx: legendValueSx, children: [
+      /* @__PURE__ */ jsx34(Divider2, { sx: { my: 2 } }),
+      /* @__PURE__ */ jsx34(Box25, { sx: legendRowSx, children: series.map((item, i) => /* @__PURE__ */ jsxs16(Box25, { sx: legendItemSx, children: [
+        /* @__PURE__ */ jsx34(Box25, { sx: legendDotSx(resolvedColors[i] ?? theme.palette.primary.main) }),
+        /* @__PURE__ */ jsx34(Typography15, { variant: "subtitle2", children: item.label }),
+        /* @__PURE__ */ jsxs16(Typography15, { variant: "caption", sx: legendValueSx, children: [
           item.value,
           "%"
         ] })
