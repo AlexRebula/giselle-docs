@@ -2539,7 +2539,13 @@ var phaseLiSx = (opts) => ({
   // preventing the next <li>'s phase card from painting over the hovered card.
   // Supported: Chrome 121+, Firefox 121+, Safari 17+ (within browser support matrix).
   "&:has([data-ms-card]:hover)": { zIndex: 3 },
-  ...opts.computedMinHeight !== void 0 && { minHeight: opts.computedMinHeight }
+  // At xs/sm (< 900 px) the phase cards are taller because titles wrap in the narrow
+  // column (~160 px), which would push them below the first milestone row.
+  // Doubling minHeight at xs/sm ensures the first milestone slot starts at
+  // 2 × slotHeight ≈ 172 px from the <li> top — safely below any phase card.
+  ...opts.computedMinHeight !== void 0 && {
+    minHeight: { xs: opts.computedMinHeight * 2, md: opts.computedMinHeight }
+  }
 });
 var msCardWrapperSx = (isExpanded, suppressElevation, side) => (theme) => ({
   position: "absolute",
