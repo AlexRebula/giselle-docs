@@ -192,8 +192,8 @@ declare function remToPx(rem: number): number;
  * Giselle brand theme preset for MUI v7 CSS Variables mode.
  *
  * Defines the Giselle ecosystem's default palette as a ready-to-use
- * `extendTheme()` result. Pass directly to `CssVarsProvider` or consume via
- * `GiselleThemeProvider` (Phase C).
+ * `extendTheme()` result. Pass directly to `ThemeProvider` or use the
+ * zero-config `GiselleThemeProvider` wrapper (Phase C).
  *
  * **Brand palette — the Carabao mango tree:**
  * - Primary   — Deep grove green `#2E7D32` (Lime `#76C442` in dark mode)
@@ -225,14 +225,14 @@ declare const GISELLE_SECONDARY_MAIN = "#F5A623";
  * A ready-to-use result of `extendTheme()` carrying the full Giselle palette
  * for both light and dark colour schemes.
  *
- * **Usage — with `CssVarsProvider` directly:**
+ * **Usage — with `ThemeProvider` directly:**
  * ```tsx
- * import { CssVarsProvider } from '@mui/material/styles';
+ * import { ThemeProvider } from '@mui/material/styles';
  * import { giselleTheme } from '@alexrebula/giselle-mui';
  *
- * <CssVarsProvider theme={giselleTheme}>
+ * <ThemeProvider theme={giselleTheme}>
  *   <App />
- * </CssVarsProvider>
+ * </ThemeProvider>
  * ```
  *
  * **Usage — via `GiselleThemeProvider` (Phase C, zero-config):**

@@ -54,3 +54,18 @@ This site is MIT-licensed and public. It must contain zero code or content deriv
 - Replacing the WC-6 hero placeholder once the illustration asset is available
 - Any Docusaurus plugin configuration for multi-instance docs (one plugin instance per package)
 - `sidebars.ts` updates when new docs are added
+
+---
+
+## Contributor profiles — code review tone
+
+This repository welcomes contributors at all experience levels. When reviewing any PR:
+
+- **Hold the same quality standard regardless of contributor experience.** Do not lower the bar — explain what needs to change and why, just as you would for any contributor.
+- **Explain the why, not just the what.** Do not say "use `const` here"; say "use `const` here because this value never changes — it signals to anyone reading the code that this was intentional, not a mistake."
+- **One issue per comment.** Do not stack multiple changes into one comment.
+- **Acknowledge what is correct before noting what to improve.**
+- **When something is wrong, show what correct looks like** — not just "this is wrong"; show the fixed version and explain why it is better.
+- **Four sentences max per comment.** Link to MDN or the repo README instead of writing a lecture inline.
+- **No jargon without a definition.** If a term like "idempotent", "side effect", or "type assertion" appears in a comment, define it in the same sentence.
+- **Do not ask for perfection.** If the code is correct, passes the quality gate, and solves the problem — it ships. Encourage, merge, move on.
