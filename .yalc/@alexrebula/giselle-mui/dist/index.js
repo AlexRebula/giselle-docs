@@ -2430,6 +2430,7 @@ function MilestoneBadge({
 // src/components/timeline/two-column/two-column.styles.ts
 var timelineColumnSx = (columnSide, hasContent, bottomPadding) => ({
   flex: 1,
+  minWidth: 0,
   textAlign: columnSide === "left" ? "right" : "left",
   pr: columnSide === "left" ? 2 : 0,
   pl: columnSide === "right" ? 2 : 0,
@@ -2448,6 +2449,7 @@ var msRowSx = (topPercent) => ({
 });
 var msColumnBoxSx = (visible) => ({
   flex: 1,
+  minWidth: 0,
   position: "relative",
   overflow: "visible",
   display: { xs: visible ? "block" : "none", md: "block" }
@@ -2490,6 +2492,8 @@ var markerPhaseLiSx = {
 };
 var markerLeftLabelSx = {
   flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
@@ -2499,10 +2503,13 @@ var markerCenterSx = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
+  flexShrink: 0,
   position: "relative"
 };
 var markerRightLabelSx = {
   flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
   display: "flex",
   justifyContent: "flex-start",
   alignItems: "center",
@@ -2512,6 +2519,7 @@ var phaseRowSx = (blurred) => ({
   display: "flex",
   flexDirection: "row",
   alignItems: "stretch",
+  minWidth: 0,
   transition: "filter 0.2s ease, opacity 0.2s ease, transform 0.2s ease",
   ...blurred && {
     filter: "blur(1.5px)",
@@ -2554,11 +2562,13 @@ var msCardWrapperSx = (isExpanded, suppressElevation, side) => (theme) => ({
 var centerColumnSx = {
   display: "flex",
   flexDirection: "column",
-  alignItems: "center"
+  alignItems: "center",
+  flexShrink: 0
 };
 var timelineRootSx = {
   p: 0,
   m: 0,
+  overflowX: "hidden",
   "& .MuiTimelineItem-root:before": { flex: 0, padding: 0 }
 };
 var markerRowInnerSx = {
