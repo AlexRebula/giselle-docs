@@ -18,6 +18,16 @@
       "types": "./dist/utils.d.ts",
       "import": "./dist/utils.js",
       "require": "./dist/utils.cjs"
+    },
+    "./charts": {
+      "types": "./dist/charts.d.ts",
+      "import": "./dist/charts.js",
+      "require": "./dist/charts.cjs"
+    },
+    "./motion": {
+      "types": "./dist/motion.d.ts",
+      "import": "./dist/motion.js",
+      "require": "./dist/motion.cjs"
     }
   },
   "publishConfig": {
@@ -30,6 +40,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "prebuild": "node -e \"require('fs').rmSync('dist', {recursive:true,force:true})\"",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
@@ -83,5 +94,5 @@
       "optional": true
     }
   },
-  "yalcSig": "236d516e3f6070009e5c100165b3446f"
+  "yalcSig": "e30c750db4f6b44d97bf7867a793fefa"
 }

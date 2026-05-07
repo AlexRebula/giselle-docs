@@ -1201,6 +1201,85 @@ declare function TimelineDot({ icon, color, size, active, done, animationKey, do
 declare function TimelineTwoColumn({ phases, checklist, onTogglePhaseDone, onToggleMilestoneDone, onToggleTaskDone, selectedPhaseKey, onPhaseSelect, expandableIcon, viewedKeys, onMarkViewed, onPhasesChange, sortOrder, milestoneSlotHeight, phaseCardGap, yearLabelMarginBottom, sx, ...other }: TimelineTwoColumnProps): react_jsx_runtime.JSX.Element;
 
 /**
+ * Props for `TimelineCompact`.
+ *
+ * Accepts the same `phases` array as `TimelineTwoColumn` — no separate data model.
+ * Swap at a breakpoint without changing the data layer:
+ *
+ * ```tsx
+ * {isMobile
+ *   ? <TimelineCompact phases={phases} />
+ *   : <TimelineTwoColumn phases={phases} columnLabels={...} sidebar={...} />
+ * }
+ * ```
+ */
+interface TimelineCompactProps extends BoxProps {
+    /**
+     * Timeline phases to render as accordion rows.
+     *
+     * Each phase maps to one accordion item:
+     * - Summary: coloured dot + title + date
+     * - Details: description text + milestone list
+     */
+    phases: TimelinePhase[];
+}
+
+/**
+ * `TimelineCompact` renders a `TimelinePhase[]` as a single-column list of
+ * expandable accordion items — the lightweight mobile companion to `TimelineTwoColumn`.
+ *
+ * Accepts the **same `phases` data** as `TimelineTwoColumn`, so consumers can swap
+ * components at a breakpoint without changing the data layer:
+ *
+ * ```tsx
+ * {isMobile
+ *   ? <TimelineCompact phases={phases} />
+ *   : <TimelineTwoColumn phases={phases} columnLabels={labels} sidebar={sidebar} />
+ * }
+ * ```
+ *
+ * Each phase renders as an accordion row:
+ * - **Summary (collapsed):** coloured dot (with phase icon inside) + title + date
+ * - **Details (expanded):** description paragraph + milestone list
+ *
+ * Done phases (`done: true`) render with a green dot and reduced opacity —
+ * matching the `TimelineTwoColumn` done-state convention.
+ */
+declare function TimelineCompact({ phases, sx, ...other }: TimelineCompactProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Resolves a `TimelineDotProps['color']` value to a `HighlightedPaletteKey` safe
+ * for indexing into `theme.vars.palette[color]`.
+ *
+ * - `done=true` always returns `'success'` (green checkmark — same convention as
+ *   `TimelineTwoColumn`'s done-dot colour enforcement rule).
+ * - `'inherit'` and `'grey'` fall back to `'primary'` — neither maps to a
+ *   `mainChannel`-capable palette slot.
+ * - `undefined` falls back to `'primary'`.
+ */
+declare function resolveCompactColor(color: TimelineDotProps['color'] | undefined, done?: boolean): HighlightedPaletteKey;
+
+/** Diameter (px) of the coloured dot in the accordion phase summary row. */
+declare const COMPACT_PHASE_DOT_SIZE = 14;
+/** Diameter (px) of the coloured dot beside each milestone row in the details body. */
+declare const COMPACT_MILESTONE_DOT_SIZE = 10;
+/**
+ * Size (px) of the phase icon rendered inside the phase summary dot.
+ * Must be smaller than `COMPACT_PHASE_DOT_SIZE` to fit inside the circle.
+ */
+declare const COMPACT_PHASE_ICON_SIZE = 12;
+/**
+ * Minimum acceptable diameter for the phase dot.
+ * Must stay at or above this to remain glanceable at mobile font scales.
+ */
+declare const COMPACT_MIN_PHASE_DOT_SIZE = 12;
+/**
+ * Minimum acceptable diameter for the milestone dot.
+ * Must stay at or above this to remain visible as a distinct element.
+ */
+declare const COMPACT_MIN_MILESTONE_DOT_SIZE = 8;
+
+/**
  * A single action item rendered as a `Tooltip` + `IconButton`.
  *
  * The `icon` slot accepts any `ReactNode` — use `<GiselleIcon ... />` to fill it.
@@ -1790,4 +1869,4 @@ type PersonProfile = {
     notes?: string[];
 };
 
-export { type BehavioralPattern, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, type TimelineColumnLabels, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveMaturityColor, resolveMaturityLabel };
+export { type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel };
