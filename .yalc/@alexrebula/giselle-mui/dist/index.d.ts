@@ -3,6 +3,7 @@ import { SxProps, Theme } from '@mui/material/styles';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { IconProps } from '@iconify/react';
 import React, { ReactNode } from 'react';
+import { AccordionProps as AccordionProps$1 } from '@mui/material/Accordion';
 import { BoxProps } from '@mui/material/Box';
 import { PaperProps } from '@mui/material/Paper';
 import { ButtonBaseProps } from '@mui/material/ButtonBase';
@@ -325,6 +326,205 @@ interface GiselleIconProps {
  * />
  */
 declare function GiselleIcon({ icon, width, height, sx, className, style, flip, rotate, }: GiselleIconProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Props for the {@link Accordion} component.
+ *
+ * Extends MUI `AccordionProps` — all expand/collapse controls (`expanded`,
+ * `onChange`, `defaultExpanded`, `TransitionComponent`, etc.) are forwarded
+ * to the underlying MUI Accordion unchanged.
+ */
+type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
+    /** Content displayed in the accordion summary row (the always-visible part). */
+    title: ReactNode;
+    /** Content revealed inside the accordion when it is expanded. */
+    children?: ReactNode;
+    /**
+     * Enables checklist mode.
+     *
+     * When `true`, a done-toggle control appears before the title. The control is
+     * **independent** from the expand/collapse trigger — activating it toggles the
+     * `done` state without opening or closing the accordion.
+     *
+     * - Without `checkIcon`: renders a MUI `Checkbox` (default).
+     * - With `checkIcon`: renders an `IconButton` with 3-state icon feedback
+     *   (idle / hover+focus / done). See `checkIcon` prop for details.
+     *
+     * @default false
+     */
+    checklist?: boolean;
+    /**
+     * Controlled done state for the checklist toggle.
+     *
+     * - `true` → done
+     * - `false` → pending
+     *
+     * Has no effect when `checklist` is `false`.
+     *
+     * @default false
+     */
+    done?: boolean;
+    /**
+     * Called when the done-toggle is activated.
+     *
+     * Receives the **next** done state — the value the control will transition
+     * **to** after the interaction (the opposite of the current `done` prop).
+     *
+     * Has no effect when `checklist` is `false`.
+     *
+     * ```tsx
+     * <Accordion
+     *   checklist
+     *   done={task.done}
+     *   onDoneButtonClick={(isDone) => updateTask(task.id, { done: isDone })}
+     *   title={task.title}
+     * >
+     *   <Typography>{task.description}</Typography>
+     * </Accordion>
+     * ```
+     */
+    onDoneButtonClick?: (nextDone: boolean) => void;
+    /**
+     * Custom icon for the **idle undone** state of the checklist toggle.
+     *
+     * When provided, the MUI `Checkbox` is replaced by an `IconButton` that
+     * displays three different icons depending on interaction state:
+     *
+     * | State                       | Icon shown                  |
+     * | --------------------------- | --------------------------- |
+     * | Undone + idle               | `checkIcon` (this prop)     |
+     * | Hover **or** keyboard focus | `checkHoverIcon` (outlined green check) |
+     * | Done + idle                 | `checkDoneIcon` (filled green check)    |
+     * | Done + hover/focus          | `checkHoverIcon` (outlined check → signals "click to undo") |
+     *
+     * Keyboard behaviour: Tab focuses the button (showing the outlined check),
+     * Space / Enter toggles the done state.
+     *
+     * Both hover and focus icons can be overridden via `checkHoverIcon`.
+     * The done icon can be overridden via `checkDoneIcon`.
+     *
+     * Ignored when `checklist` is `false`.
+     *
+     * ```tsx
+     * // Circle icon as the "not done yet" state
+     * <Accordion
+     *   checklist
+     *   checkIcon={<svg width={20} height={20}><circle cx={12} cy={12} r={9} /></svg>}
+     *   done={task.done}
+     *   onDoneButtonClick={(isDone) => updateTask(task.id, { done: isDone })}
+     *   title={task.title}
+     * >
+     *   ...
+     * </Accordion>
+     * ```
+     */
+    checkIcon?: ReactNode;
+    /**
+     * Icon shown when the item is done and the button is **not** hovered/focused.
+     *
+     * Default: built-in filled green check circle SVG.
+     * Override with your own `ReactNode` to use a different done indicator.
+     *
+     * Only used in icon-button mode (when `checkIcon` is provided).
+     */
+    checkDoneIcon?: ReactNode;
+    /**
+     * Icon shown when the button is **hovered or keyboard-focused**, regardless of
+     * done state.
+     *
+     * Default: built-in outlined green check circle SVG.
+     * Provides visual feedback that the button is interactive and hints at the
+     * "toggle" action. When the item is done, this icon also signals "click to undo".
+     *
+     * Only used in icon-button mode (when `checkIcon` is provided).
+     */
+    checkHoverIcon?: ReactNode;
+    /**
+     * Optional icon rendered before the title when `checklist` is `false`.
+     *
+     * Pass a `ReactNode` — typically a `<GiselleIcon icon="solar:..." />`.
+     * The wrapper is `aria-hidden` because the icon is decorative.
+     *
+     * Ignored when `checklist` is `true` (the done-toggle control replaces it).
+     */
+    leadingIcon?: ReactNode;
+    /**
+     * The expand/collapse indicator icon on the right side of the summary row.
+     *
+     * Passed directly to MUI `AccordionSummary`'s `expandIcon` prop.
+     * Typical usage:
+     * ```tsx
+     * expandIcon={<GiselleIcon icon="solar:alt-arrow-down-bold" width={16} />}
+     * ```
+     */
+    expandIcon?: ReactNode;
+};
+
+/**
+ * A generic, accessible accordion component that can represent any
+ * collapsible content — FAQ entries, tasks, settings sections, etc.
+ *
+ * ## Checklist mode
+ *
+ * When `checklist` is `true`, a done-toggle `Checkbox` appears before the
+ * title. The checkbox is **independent** from the expand/collapse trigger:
+ *
+ * - Clicking the **checkbox** calls `onDoneButtonClick(nextDone)` without
+ *   opening or closing the accordion.
+ * - Clicking the **title / summary area** expands or collapses the accordion
+ *   without toggling the done state.
+ *
+ * This is WCAG 2.2 AA compliant — the checkbox and the summary are sibling
+ * `<button>` / `<input>` elements, never nested inside each other.
+ *
+ * ## Usage
+ *
+ * ```tsx
+ * // Basic
+ * <Accordion title="What is this?" expandIcon={<GiselleIcon icon="solar:alt-arrow-down-bold" width={16} />}>
+ *   <Typography>It is a generic accordion.</Typography>
+ * </Accordion>
+ *
+ * // Task (checklist mode)
+ * <Accordion
+ *   title={task.title}
+ *   checklist
+ *   done={task.done}
+ *   onDoneButtonClick={(isDone) => updateTask(task.id, { done: isDone })}
+ *   expandIcon={<GiselleIcon icon="solar:alt-arrow-down-bold" width={16} />}
+ * >
+ *   <Typography>{task.description}</Typography>
+ * </Accordion>
+ * ```
+ */
+declare function Accordion({ title, children, checklist, done, onDoneButtonClick, leadingIcon, expandIcon, checkIcon, checkDoneIcon, checkHoverIcon, sx, ...other }: AccordionProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Minimum touch target size (px) for the done-toggle checkbox.
+ *
+ * WCAG 2.5.8 (Level AA) requires interactive targets to be at least 24 × 24 px.
+ * MUI Checkbox in `size="small"` mode renders a 38 × 38 px touch target by
+ * default, which exceeds this minimum. This constant documents the floor so
+ * regression tests can enforce it even if the checkbox padding is ever changed.
+ */
+declare const ACCORDION_DONE_MIN_TOUCH_TARGET = 24;
+/**
+ * Width and height (px) of the default check SVG icons in icon-button mode
+ * (`checkIcon`, `checkDoneIcon`, `checkHoverIcon`).
+ *
+ * Set to 20 px — the minimum for interactive icons per WCAG 1.4.11.
+ * Never reduce below 20.
+ */
+declare const ACCORDION_CHECK_ICON_SIZE = 20;
+/**
+ * Minimum touch target size (px) for the icon-button done toggle.
+ *
+ * WCAG 2.5.8 requires interactive targets to be ≥ 24 × 24 px.
+ * MUI `IconButton` in `size="small"` mode renders a ≥ 30 px touch target
+ * by default, which exceeds this minimum. This constant documents the floor
+ * for regression tests.
+ */
+declare const ACCORDION_ICON_BUTTON_MIN_SIZE = 28;
 
 type MetricCardColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
 interface MetricCardProps extends PaperProps {
@@ -1212,6 +1412,9 @@ declare function TimelineTwoColumn({ phases, checklist, onTogglePhaseDone, onTog
  *   : <TimelineTwoColumn phases={phases} columnLabels={...} sidebar={...} />
  * }
  * ```
+ *
+ * The props below mirror the equivalent `TimelineTwoColumnProps` — they are passed
+ * through automatically when `TimelineTwoColumn` switches to compact on mobile.
  */
 interface TimelineCompactProps extends BoxProps {
     /**
@@ -1219,33 +1422,51 @@ interface TimelineCompactProps extends BoxProps {
      *
      * Each phase maps to one accordion item:
      * - Summary: coloured dot + title + date
-     * - Details: description text + milestone list
+     * - Details: description text + task children list + milestone list
      */
     phases: TimelinePhase[];
+    /**
+     * Enables interactive checklist behaviour:
+     * - Phase and milestone dots become clickable to toggle done state.
+     * - Done items render with a green dot and reduced opacity.
+     * - Task children render as checkboxes.
+     * @see TimelineTwoColumnProps.checklist
+     */
+    checklist?: boolean;
+    /**
+     * Sort direction for phases and milestones — mirrors `TimelineTwoColumnProps.sortOrder`.
+     * @default 'desc'
+     * @see TimelineTwoColumnProps.sortOrder
+     */
+    sortOrder?: 'asc' | 'desc' | 'key';
+    /**
+     * Set of viewed phase keys. `phase-${phase.key}` is added when a phase accordion is opened.
+     * @see TimelineTwoColumnProps.viewedKeys
+     */
+    viewedKeys?: Set<string>;
+    /**
+     * Called when a phase accordion is opened for the first time — key format `phase-${phase.key}`.
+     * @see TimelineTwoColumnProps.onMarkViewed
+     */
+    onMarkViewed?: (key: string) => void;
+    /**
+     * Called when the user clicks a phase dot in checklist mode.
+     * @see TimelineTwoColumnProps.onTogglePhaseDone
+     */
+    onTogglePhaseDone?: (key: number, done: boolean) => void;
+    /**
+     * Called when the user clicks a milestone dot in checklist mode.
+     * @see TimelineTwoColumnProps.onToggleMilestoneDone
+     */
+    onToggleMilestoneDone?: (phaseKey: number, milestoneIndex: number, done: boolean) => void;
+    /**
+     * Called when the user toggles a task checkbox.
+     * @see TimelineTwoColumnProps.onToggleTaskDone
+     */
+    onToggleTaskDone?: (phaseKey: number, milestoneIndex: number | null, taskIndex: number, done: boolean) => void;
 }
 
-/**
- * `TimelineCompact` renders a `TimelinePhase[]` as a single-column list of
- * expandable accordion items — the lightweight mobile companion to `TimelineTwoColumn`.
- *
- * Accepts the **same `phases` data** as `TimelineTwoColumn`, so consumers can swap
- * components at a breakpoint without changing the data layer:
- *
- * ```tsx
- * {isMobile
- *   ? <TimelineCompact phases={phases} />
- *   : <TimelineTwoColumn phases={phases} columnLabels={labels} sidebar={sidebar} />
- * }
- * ```
- *
- * Each phase renders as an accordion row:
- * - **Summary (collapsed):** coloured dot (with phase icon inside) + title + date
- * - **Details (expanded):** description paragraph + milestone list
- *
- * Done phases (`done: true`) render with a green dot and reduced opacity —
- * matching the `TimelineTwoColumn` done-state convention.
- */
-declare function TimelineCompact({ phases, sx, ...other }: TimelineCompactProps): react_jsx_runtime.JSX.Element;
+declare function TimelineCompact({ phases, checklist, sortOrder, viewedKeys: _viewedKeys, onMarkViewed, onTogglePhaseDone, onToggleMilestoneDone, onToggleTaskDone, sx, ...other }: TimelineCompactProps): react_jsx_runtime.JSX.Element;
 
 /**
  * Resolves a `TimelineDotProps['color']` value to a `HighlightedPaletteKey` safe
@@ -1260,24 +1481,68 @@ declare function TimelineCompact({ phases, sx, ...other }: TimelineCompactProps)
 declare function resolveCompactColor(color: TimelineDotProps['color'] | undefined, done?: boolean): HighlightedPaletteKey;
 
 /** Diameter (px) of the coloured dot in the accordion phase summary row. */
-declare const COMPACT_PHASE_DOT_SIZE = 14;
-/** Diameter (px) of the coloured dot beside each milestone row in the details body. */
-declare const COMPACT_MILESTONE_DOT_SIZE = 10;
+declare const COMPACT_PHASE_DOT_SIZE = 32;
+/** Diameter (px) of the coloured dot in each milestone row. */
+declare const COMPACT_MILESTONE_DOT_SIZE = 32;
 /**
- * Size (px) of the phase icon rendered inside the phase summary dot.
+ * Size (px) of the icon rendered inside the phase summary dot.
  * Must be smaller than `COMPACT_PHASE_DOT_SIZE` to fit inside the circle.
  */
-declare const COMPACT_PHASE_ICON_SIZE = 12;
+declare const COMPACT_PHASE_ICON_SIZE = 18;
 /**
  * Minimum acceptable diameter for the phase dot.
  * Must stay at or above this to remain glanceable at mobile font scales.
  */
-declare const COMPACT_MIN_PHASE_DOT_SIZE = 12;
+declare const COMPACT_MIN_PHASE_DOT_SIZE = 18;
 /**
  * Minimum acceptable diameter for the milestone dot.
  * Must stay at or above this to remain visible as a distinct element.
  */
-declare const COMPACT_MIN_MILESTONE_DOT_SIZE = 8;
+declare const COMPACT_MIN_MILESTONE_DOT_SIZE = 18;
+
+interface TaskListProps extends BoxProps {
+    /** The task items to render. */
+    tasks: Task[];
+    /**
+     * When `true`, renders a `Checkbox` before each task title so users can
+     * toggle individual tasks done.
+     * @default false
+     */
+    checklist?: boolean;
+    /**
+     * Resolved done-state per task (0-indexed, matches `tasks` array order).
+     * When provided, overrides `task.done` for display and accessibility.
+     * Must have the same length as `tasks`.
+     */
+    taskDoneState?: boolean[];
+    /**
+     * Called when the user toggles a task checkbox.
+     * Receives the 0-based index of the toggled task.
+     * Has no effect when `checklist={false}`.
+     */
+    onTaskToggle?: (taskIndex: number) => void;
+    /**
+     * Controls left-padding level.
+     * - `'phase'` — top-level task list, `pl: 2` (default)
+     * - `'milestone'` — nested under a milestone card, `pl: 3`
+     * @default 'phase'
+     */
+    indent?: 'phase' | 'milestone';
+}
+
+/**
+ * Renders a flat list of `Task` items for use inside timeline cards,
+ * detail drawers, and modals.
+ *
+ * In **checklist mode** (`checklist={true}`) each row shows a `Checkbox`
+ * that the consumer controls via `taskDoneState` + `onToggle`. In read-only
+ * mode the list is purely presentational and tasks marked `done` in the
+ * data receive a line-through style.
+ *
+ * Use `indent="milestone"` when the list sits inside a milestone card to
+ * add an extra level of left padding relative to the phase-level baseline.
+ */
+declare function TaskList({ tasks, checklist, taskDoneState, onTaskToggle, indent, sx, ...other }: TaskListProps): react_jsx_runtime.JSX.Element;
 
 /**
  * A single action item rendered as a `Tooltip` + `IconButton`.
@@ -1869,4 +2134,4 @@ type PersonProfile = {
     notes?: string[];
 };
 
-export { type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel };
+export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel };
