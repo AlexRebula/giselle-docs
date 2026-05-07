@@ -440,6 +440,56 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      */
     checkHoverIcon?: ReactNode;
     /**
+     * When `true`, the `Checkbox` renders in indeterminate state — used when some
+     * but not all child items are done. Has no effect in icon-button mode
+     * (`checkIcon` provided) or when `checklist` is `false`.
+     *
+     * Wire this from a `useNestedChecklist` result: `indeterminate={indeterminate}`.
+     *
+     * @default false
+     */
+    indeterminate?: boolean;
+    /**
+     * Interactive element rendered before the title — replaces `leadingIcon` when
+     * the leading slot must be clickable (e.g. a phase dot in checklist mode).
+     *
+     * Unlike `leadingIcon` (which is wrapped in `aria-hidden`), `leadingAction`
+     * is rendered as-is. The consumer is responsible for accessibility
+     * (`role`, `aria-label`, `onClick`, etc.).
+     *
+     * Cannot be used together with `checklist` — checklist owns the leading slot.
+     * If both are provided, `checklist` takes precedence.
+     *
+     * ```tsx
+     * <Accordion
+     *   leadingAction={
+     *     <PhaseDot color={color} onClick={handleToggle} aria-label="Toggle phase done" />
+     *   }
+     *   trailingContent={<Typography variant="caption">{phase.date}</Typography>}
+     *   title={phase.title}
+     * >
+     *   ...
+     * </Accordion>
+     * ```
+     */
+    leadingAction?: ReactNode;
+    /**
+     * Optional content rendered **after** the title inside the summary row
+     * (e.g. a date label, a status badge).
+     *
+     * Rendered inside the same flex row as the title — consumers are responsible
+     * for alignment (`ml: 'auto'`, `flexShrink: 0`, etc.) if needed.
+     *
+     * ```tsx
+     * trailingContent={
+     *   <Typography variant="caption" sx={{ ml: 'auto', flexShrink: 0 }}>
+     *     {phase.date}
+     *   </Typography>
+     * }
+     * ```
+     */
+    trailingContent?: ReactNode;
+    /**
      * Optional icon rendered before the title when `checklist` is `false`.
      *
      * Pass a `ReactNode` — typically a `<GiselleIcon icon="solar:..." />`.
@@ -497,7 +547,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
  * </Accordion>
  * ```
  */
-declare function Accordion({ title, children, checklist, done, onDoneButtonClick, leadingIcon, expandIcon, checkIcon, checkDoneIcon, checkHoverIcon, sx, ...other }: AccordionProps): react_jsx_runtime.JSX.Element;
+declare function Accordion({ title, children, checklist, done, indeterminate, onDoneButtonClick, leadingIcon, leadingAction, trailingContent, expandIcon, checkIcon, checkDoneIcon, checkHoverIcon, sx, ...other }: AccordionProps): react_jsx_runtime.JSX.Element;
 
 /**
  * Minimum touch target size (px) for the done-toggle checkbox.
@@ -1482,8 +1532,10 @@ declare function resolveCompactColor(color: TimelineDotProps['color'] | undefine
 
 /** Diameter (px) of the coloured dot in the accordion phase summary row. */
 declare const COMPACT_PHASE_DOT_SIZE = 32;
-/** Diameter (px) of the coloured dot in each milestone row. */
-declare const COMPACT_MILESTONE_DOT_SIZE = 32;
+/** Diameter (px) of the coloured dot in each milestone row.
+ * Smaller than the phase dot to establish visual hierarchy (phase = 32 px, milestone = 24 px).
+ * Matches the proportional ratio used by `TimelineTwoColumn` (42 px phase, 34 px milestone). */
+declare const COMPACT_MILESTONE_DOT_SIZE = 24;
 /**
  * Size (px) of the icon rendered inside the phase summary dot.
  * Must be smaller than `COMPACT_PHASE_DOT_SIZE` to fit inside the circle.
@@ -1543,6 +1595,66 @@ interface TaskListProps extends BoxProps {
  * add an extra level of left padding relative to the phase-level baseline.
  */
 declare function TaskList({ tasks, checklist, taskDoneState, onTaskToggle, indent, sx, ...other }: TaskListProps): react_jsx_runtime.JSX.Element;
+
+interface NestedChecklistState {
+    /** Whether the parent item is done (all children done). */
+    parentDone: boolean;
+    /**
+     * Whether the parent checkbox should display indeterminate state.
+     * `true` when at least one but not all children are done.
+     */
+    indeterminate: boolean;
+    /** Current done state for each child, indexed by position. */
+    childrenDone: boolean[];
+    /**
+     * Toggle the parent.
+     * - Transitioning to `true`: marks ALL children done.
+     * - Transitioning to `false`: marks ALL children undone.
+     */
+    toggleParent: () => void;
+    /**
+     * Toggle one child by index.
+     * - If all children are now done → parent becomes done.
+     * - If any child is now undone → parent becomes undone.
+     */
+    toggleChild: (index: number) => void;
+}
+/**
+ * Manages the cascade done-state relationship between a parent item
+ * (an accordion / phase) and its child items (milestones / tasks).
+ *
+ * ## Cascade rules
+ *
+ * | Action | Effect |
+ * |---|---|
+ * | Toggle parent → done | All children → done |
+ * | Toggle parent → undone | All children → undone |
+ * | Toggle child → all done | Parent → done |
+ * | Toggle child → any undone | Parent → undone |
+ *
+ * ## Usage in TimelineCompact
+ *
+ * ```tsx
+ * const { parentDone, indeterminate, childrenDone, toggleParent, toggleChild } =
+ *   useNestedChecklist(phase.done ?? false, milestones.map(ms => ms.done ?? false));
+ *
+ * <Accordion
+ *   checklist
+ *   done={parentDone}
+ *   indeterminate={indeterminate}
+ *   onDoneButtonClick={toggleParent}
+ *   title={phase.title}
+ * >
+ *   {milestones.map((ms, i) => (
+ *     <MilestoneRow key={i} done={childrenDone[i]} onToggle={() => toggleChild(i)} />
+ *   ))}
+ * </Accordion>
+ * ```
+ *
+ * @param initialParentDone - Initial done state for the parent.
+ * @param initialChildrenDone - Initial done state for each child, positionally indexed.
+ */
+declare function useNestedChecklist(initialParentDone: boolean, initialChildrenDone: boolean[]): NestedChecklistState;
 
 /**
  * A single action item rendered as a `Tooltip` + `IconButton`.
@@ -2134,4 +2246,4 @@ type PersonProfile = {
     notes?: string[];
 };
 
-export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel };
+export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type NestedChecklistState, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel, useNestedChecklist };
