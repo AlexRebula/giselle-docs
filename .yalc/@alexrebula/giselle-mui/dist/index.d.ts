@@ -646,6 +646,8 @@ declare function MetricCardDecoration({ color, sx, ...other }: MetricCardDecorat
  *   decoration={<MetricCardDecoration color="primary" />}
  *   sx={(theme) => ({ boxShadow: theme.shadows[2] })}
  * />
+ *
+ * **Quality status (8 May 2026):** DoD 19/20 · Best practices 12/13
  */
 declare function MetricCard({ value, label, sublabel, icon, color, decoration, elevation, sx, ...other }: MetricCardProps): react_jsx_runtime.JSX.Element;
 

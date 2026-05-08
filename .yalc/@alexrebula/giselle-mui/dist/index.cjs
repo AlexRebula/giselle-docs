@@ -386,6 +386,10 @@ var import_Box4 = __toESM(require("@mui/material/Box"), 1);
 var import_Paper = __toESM(require("@mui/material/Paper"), 1);
 var import_Typography2 = __toESM(require("@mui/material/Typography"), 1);
 
+// src/components/card/metric/metric-card.const.ts
+var METRIC_CARD_ICON_BOX_SIZE = 36;
+var METRIC_CARD_DECORATION_SIZE = 140;
+
 // src/components/card/metric/metric-card.styles.ts
 var metricCardPaperSx = {
   py: 3,
@@ -400,11 +404,16 @@ var decorationOverlaySx = {
   zIndex: 0,
   pointerEvents: "none"
 };
+var metricCardContentSx = {
+  position: "relative",
+  zIndex: 1,
+  flexGrow: 1
+};
 var metricCardIconBoxSx = (color) => (theme) => ({
   top: 24,
   right: 20,
-  width: 36,
-  height: 36,
+  width: METRIC_CARD_ICON_BOX_SIZE,
+  height: METRIC_CARD_ICON_BOX_SIZE,
   position: "absolute",
   zIndex: 1,
   display: "flex",
@@ -415,8 +424,8 @@ var metricCardIconBoxSx = (color) => (theme) => ({
 var metricCardDecorationSx = (color) => (theme) => ({
   top: -40,
   right: -56,
-  width: 140,
-  height: 140,
+  width: METRIC_CARD_DECORATION_SIZE,
+  height: METRIC_CARD_DECORATION_SIZE,
   opacity: 0.1,
   borderRadius: 4,
   position: "absolute",
@@ -456,7 +465,7 @@ function MetricCard({
       ...other,
       children: [
         decoration && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_Box4.default, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_Box4.default, { sx: { position: "relative", zIndex: 1, flexGrow: 1 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_Box4.default, { sx: metricCardContentSx, children: [
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_Box4.default, { sx: { typography: "h3" }, children: value }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_Typography2.default, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
           sublabel && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
@@ -2540,7 +2549,10 @@ var accordionRootSx = (done) => ({
   borderRadius: 2,
   boxShadow: "none",
   "&:before": { display: "none" },
-  "&.Mui-expanded": { margin: 0 },
+  "&.Mui-expanded": {
+    margin: 0,
+    bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.08)
+  },
   "&:hover": {
     bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.08)
   },
@@ -2637,7 +2649,16 @@ function TaskList({
           inputProps: { "aria-label": task.title }
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(import_Typography11.default, { variant: "caption", sx: taskCaptionSx(isDone), children: task.title })
+      !checklist && /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(
+        import_Typography11.default,
+        {
+          component: "span",
+          variant: "body2",
+          sx: { color: "text.disabled", mr: 0.75, flexShrink: 0 },
+          children: "\u203A"
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime23.jsx)(import_Typography11.default, { variant: "body2", sx: taskCaptionSx(isDone), children: task.title })
     ] }, i);
   }) });
 }
@@ -2910,7 +2931,7 @@ function PhaseAccordionRow({
                   ] }),
                   /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_Box18.default, { sx: milestoneContentSx, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(import_Typography13.default, { variant: "subtitle2", sx: milestoneTitleSx, children: ms.shortTitle ?? ms.title }),
-                    ms.description && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(import_Typography13.default, { variant: "caption", sx: milestoneDescriptionPreviewSx, children: ms.description })
+                    ms.description && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(import_Typography13.default, { variant: "body2", sx: milestoneDescriptionPreviewSx, children: ms.description })
                   ] }),
                   ms.date && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(import_Typography13.default, { variant: "caption", sx: milestoneDateSx, children: ms.date })
                 ]

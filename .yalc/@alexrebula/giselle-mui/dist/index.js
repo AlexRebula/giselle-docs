@@ -309,6 +309,10 @@ import Box4 from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography2 from "@mui/material/Typography";
 
+// src/components/card/metric/metric-card.const.ts
+var METRIC_CARD_ICON_BOX_SIZE = 36;
+var METRIC_CARD_DECORATION_SIZE = 140;
+
 // src/components/card/metric/metric-card.styles.ts
 var metricCardPaperSx = {
   py: 3,
@@ -323,11 +327,16 @@ var decorationOverlaySx = {
   zIndex: 0,
   pointerEvents: "none"
 };
+var metricCardContentSx = {
+  position: "relative",
+  zIndex: 1,
+  flexGrow: 1
+};
 var metricCardIconBoxSx = (color) => (theme) => ({
   top: 24,
   right: 20,
-  width: 36,
-  height: 36,
+  width: METRIC_CARD_ICON_BOX_SIZE,
+  height: METRIC_CARD_ICON_BOX_SIZE,
   position: "absolute",
   zIndex: 1,
   display: "flex",
@@ -338,8 +347,8 @@ var metricCardIconBoxSx = (color) => (theme) => ({
 var metricCardDecorationSx = (color) => (theme) => ({
   top: -40,
   right: -56,
-  width: 140,
-  height: 140,
+  width: METRIC_CARD_DECORATION_SIZE,
+  height: METRIC_CARD_DECORATION_SIZE,
   opacity: 0.1,
   borderRadius: 4,
   position: "absolute",
@@ -379,7 +388,7 @@ function MetricCard({
       ...other,
       children: [
         decoration && /* @__PURE__ */ jsx5(Box4, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
-        /* @__PURE__ */ jsxs3(Box4, { sx: { position: "relative", zIndex: 1, flexGrow: 1 }, children: [
+        /* @__PURE__ */ jsxs3(Box4, { sx: metricCardContentSx, children: [
           /* @__PURE__ */ jsx5(Box4, { sx: { typography: "h3" }, children: value }),
           /* @__PURE__ */ jsx5(Typography2, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
           sublabel && /* @__PURE__ */ jsx5(
@@ -2470,7 +2479,10 @@ var accordionRootSx = (done) => ({
   borderRadius: 2,
   boxShadow: "none",
   "&:before": { display: "none" },
-  "&.Mui-expanded": { margin: 0 },
+  "&.Mui-expanded": {
+    margin: 0,
+    bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.08)
+  },
   "&:hover": {
     bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.08)
   },
@@ -2567,7 +2579,16 @@ function TaskList({
           inputProps: { "aria-label": task.title }
         }
       ),
-      /* @__PURE__ */ jsx23(Typography11, { variant: "caption", sx: taskCaptionSx(isDone), children: task.title })
+      !checklist && /* @__PURE__ */ jsx23(
+        Typography11,
+        {
+          component: "span",
+          variant: "body2",
+          sx: { color: "text.disabled", mr: 0.75, flexShrink: 0 },
+          children: "\u203A"
+        }
+      ),
+      /* @__PURE__ */ jsx23(Typography11, { variant: "body2", sx: taskCaptionSx(isDone), children: task.title })
     ] }, i);
   }) });
 }
@@ -2840,7 +2861,7 @@ function PhaseAccordionRow({
                   ] }),
                   /* @__PURE__ */ jsxs16(Box18, { sx: milestoneContentSx, children: [
                     /* @__PURE__ */ jsx26(Typography13, { variant: "subtitle2", sx: milestoneTitleSx, children: ms.shortTitle ?? ms.title }),
-                    ms.description && /* @__PURE__ */ jsx26(Typography13, { variant: "caption", sx: milestoneDescriptionPreviewSx, children: ms.description })
+                    ms.description && /* @__PURE__ */ jsx26(Typography13, { variant: "body2", sx: milestoneDescriptionPreviewSx, children: ms.description })
                   ] }),
                   ms.date && /* @__PURE__ */ jsx26(Typography13, { variant: "caption", sx: milestoneDateSx, children: ms.date })
                 ]
