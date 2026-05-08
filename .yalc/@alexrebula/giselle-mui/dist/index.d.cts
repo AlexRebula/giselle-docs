@@ -2,7 +2,8 @@ import * as _mui_material_styles from '@mui/material/styles';
 import { SxProps, Theme } from '@mui/material/styles';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { IconProps } from '@iconify/react';
-import React, { ReactNode } from 'react';
+import * as React from 'react';
+import React__default, { ReactNode as ReactNode$1 } from 'react';
 import { AccordionProps as AccordionProps$1 } from '@mui/material/Accordion';
 import { BoxProps } from '@mui/material/Box';
 import { PaperProps } from '@mui/material/Paper';
@@ -287,7 +288,7 @@ interface GiselleIconProps {
     /** HTML `class` attribute forwarded to the inner `Icon` SVG element. */
     className?: string;
     /** Inline style forwarded to the inner `Icon` SVG element. */
-    style?: React.CSSProperties;
+    style?: React__default.CSSProperties;
     /**
      * Flip the icon horizontally, vertically, or both.
      * @example `"horizontal"` | `"vertical"` | `"horizontal,vertical"`
@@ -336,9 +337,9 @@ declare function GiselleIcon({ icon, width, height, sx, className, style, flip, 
  */
 type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
     /** Content displayed in the accordion summary row (the always-visible part). */
-    title: ReactNode;
+    title: ReactNode$1;
     /** Content revealed inside the accordion when it is expanded. */
-    children?: ReactNode;
+    children?: ReactNode$1;
     /**
      * Enables checklist mode.
      *
@@ -418,7 +419,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      * </Accordion>
      * ```
      */
-    checkIcon?: ReactNode;
+    checkIcon?: ReactNode$1;
     /**
      * Icon shown when the item is done and the button is **not** hovered/focused.
      *
@@ -427,7 +428,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      *
      * Only used in icon-button mode (when `checkIcon` is provided).
      */
-    checkDoneIcon?: ReactNode;
+    checkDoneIcon?: ReactNode$1;
     /**
      * Icon shown when the button is **hovered or keyboard-focused**, regardless of
      * done state.
@@ -438,7 +439,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      *
      * Only used in icon-button mode (when `checkIcon` is provided).
      */
-    checkHoverIcon?: ReactNode;
+    checkHoverIcon?: ReactNode$1;
     /**
      * When `true`, the `Checkbox` renders in indeterminate state — used when some
      * but not all child items are done. Has no effect in icon-button mode
@@ -472,7 +473,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      * </Accordion>
      * ```
      */
-    leadingAction?: ReactNode;
+    leadingAction?: ReactNode$1;
     /**
      * Optional content rendered **after** the title inside the summary row
      * (e.g. a date label, a status badge).
@@ -488,7 +489,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      * }
      * ```
      */
-    trailingContent?: ReactNode;
+    trailingContent?: ReactNode$1;
     /**
      * Optional icon rendered before the title when `checklist` is `false`.
      *
@@ -497,7 +498,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      *
      * Ignored when `checklist` is `true` (the done-toggle control replaces it).
      */
-    leadingIcon?: ReactNode;
+    leadingIcon?: ReactNode$1;
     /**
      * The expand/collapse indicator icon on the right side of the summary row.
      *
@@ -507,7 +508,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
      * expandIcon={<GiselleIcon icon="solar:alt-arrow-down-bold" width={16} />}
      * ```
      */
-    expandIcon?: ReactNode;
+    expandIcon?: ReactNode$1;
 };
 
 /**
@@ -594,7 +595,7 @@ interface MetricCardProps extends PaperProps {
      * import { GiselleIcon, MetricCard } from '@alexrebula/giselle-mui';
      * <MetricCard icon={<GiselleIcon icon="solar:clock-circle-bold-duotone" width={36} />} ... />
      */
-    icon?: ReactNode;
+    icon?: ReactNode$1;
     /**
      * Palette color key used for the icon tint.
      * @default 'primary'
@@ -608,7 +609,7 @@ interface MetricCardProps extends PaperProps {
      * import { MetricCard, MetricCardDecoration } from '@alexrebula/giselle-mui';
      * <MetricCard decoration={<MetricCardDecoration color="primary" />} ... />
      */
-    decoration?: ReactNode;
+    decoration?: ReactNode$1;
 }
 interface MetricCardDecorationProps extends BoxProps {
     /**
@@ -647,7 +648,7 @@ declare function MetricCardDecoration({ color, sx, ...other }: MetricCardDecorat
  *   sx={(theme) => ({ boxShadow: theme.shadows[2] })}
  * />
  *
-* **Quality status (8 May 2026):** DoD 20/20 · Best practices 13/13
+ * **Quality status (8 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function MetricCard({ value, label, sublabel, icon, color, decoration, elevation, sx, ...other }: MetricCardProps): react_jsx_runtime.JSX.Element;
 
@@ -791,7 +792,7 @@ interface StatCardProps extends Omit<CardProps, 'title' | 'color'> {
      * icon={<GiselleIcon icon="solar:widget-bold-duotone" width={28} />}
      * ```
      */
-    icon?: ReactNode;
+    icon?: ReactNode$1;
     /**
      * Palette key controlling background tint, trend colour, and sparkline colour.
      * @default 'primary'
@@ -816,7 +817,7 @@ interface StatCardProps extends Omit<CardProps, 'title' | 'color'> {
      * }
      * ```
      */
-    chart?: ReactNode;
+    chart?: ReactNode$1;
     /** MUI `sx` override on the root `Card`. */
     sx?: SxProps<Theme>;
 }
@@ -865,8 +866,19 @@ declare const STAT_CARD_SPARKLINE_OPTIONS: ApexOptions;
  */
 declare function StatCard({ label, value, trend, trendLabel, icon, color, chart, sx, ...other }: StatCardProps): react_jsx_runtime.JSX.Element;
 
+type ReactNode = React.ReactNode;
+
 /** MUI palette keys that carry mainChannel — derived from TimelineDot's own color prop. */
 type HighlightedPaletteKey = Exclude<NonNullable<TimelineDotProps['color']>, 'inherit' | 'grey'>;
+/** Structured rich content rendered inside a task details modal or drawer. */
+interface TaskDetails {
+    /** Optional short summary rendered above the main content. */
+    summary?: ReactNode;
+    /** Arbitrary rich content for modal/drawer presentation. */
+    content?: ReactNode;
+    /** Optional nested tasks shown inside the details surface. */
+    tasks?: Task[];
+}
 /**
  * Base unit for any trackable work item in the timeline.
  *
@@ -878,17 +890,31 @@ type HighlightedPaletteKey = Exclude<NonNullable<TimelineDotProps['color']>, 'in
  * - Nesting is unbounded: a `Task` child can itself have `children`.
  *
  * ```
- * TimelinePhase  (extends Task)
- *   └─ milestones: TimelineMilestone[]  (each extends Task)
+ * TimelinePhase (extends Task)
+ *   └─ children / milestones: Task[]
  *        └─ children: Task[]
  *             └─ children: Task[]   ← infinite depth
  * ```
  */
 type Task = {
+    /** Stable identifier for this work item. */
+    key: number | string;
     /** Display text for this work item. */
     title: string;
+    /** Short label for collapsed display. Falls back to `title` when omitted. */
+    shortTitle?: string;
+    /** Optional summary shown inline when the parent accordion row expands. */
+    description?: string;
+    /** Human-readable date label. */
+    date?: string;
     /** Whether this task is complete. */
     done?: boolean;
+    /** Optional icon slot rendered in the leading dot. */
+    icon?: ReactNode;
+    /** Optional palette key for the leading dot. */
+    color?: TimelineDotProps['color'];
+    /** Optional rich details rendered in a modal or drawer. */
+    details?: TaskDetails;
     /**
      * Nested sub-tasks. Can be nested to any depth.
      *
@@ -1331,7 +1357,7 @@ type PhaseCardProps = Omit<BoxProps, 'children'> & {
      * Icon rendered in the expandable-details count badge. Defaults to the bundled inline SVG subtask icon.
      * Pass `null` to suppress the icon and show only the count number.
      */
-    expandableIcon?: ReactNode;
+    expandableIcon?: ReactNode$1;
     /**
      * Which column the card sits in — controls where the corner alert badge is anchored.
      * - `'right'` (default): badge floats on the right top corner (between card and spine).
@@ -1381,7 +1407,7 @@ declare function PhaseCard({ phase, done, overdue, dateConflict, dateConflictLab
 
 type TimelineDotComponentProps = Omit<BoxProps, 'color' | 'onClick'> & {
     /** Icon to render inside the dot. Accepts a `width` prop for sizing. */
-    icon?: ReactNode;
+    icon?: ReactNode$1;
     /** MUI palette key — controls background colour and shadow tint. @default 'primary' */
     color?: HighlightedPaletteKey;
     /**
@@ -1519,8 +1545,17 @@ interface TimelineCompactProps extends BoxProps {
      */
     onToggleTaskDone?: (phaseKey: number, milestoneIndex: number | null, taskIndex: number, done: boolean) => void;
 }
+interface TaskDetailsRendererProps extends BoxProps {
+    task: Task;
+    checklist?: boolean;
+    taskDoneState?: boolean[];
+    onTaskToggle?: (taskIdx: number) => void;
+    emptyState?: ReactNode$1;
+}
 
 declare function TimelineCompact({ phases, checklist, sortOrder, viewedKeys: _viewedKeys, onMarkViewed, onTogglePhaseDone, onToggleMilestoneDone, onToggleTaskDone, sx, ...other }: TimelineCompactProps): react_jsx_runtime.JSX.Element;
+
+declare function TaskDetailsRenderer({ task, checklist, taskDoneState, onTaskToggle, emptyState, sx, ...other }: TaskDetailsRendererProps): react_jsx_runtime.JSX.Element;
 
 /**
  * Resolves a `TimelineDotProps['color']` value to a `HighlightedPaletteKey` safe
@@ -1677,7 +1712,7 @@ interface IconActionItem {
      * import { GiselleIcon } from '@alexrebula/giselle-mui';
      * { tooltip: 'Edit', icon: <GiselleIcon icon="solar:pen-bold" /> }
      */
-    icon: ReactNode;
+    icon: ReactNode$1;
     /**
      * Click handler for the button.
      */
@@ -1691,7 +1726,7 @@ interface IconActionItem {
      * Overrides the root element of `IconButton` — e.g. pass `RouterLink` together
      * with `href` to make the button navigate.
      */
-    component?: React.ElementType;
+    component?: React__default.ElementType;
     /**
      * Disables the button and prevents interaction.
      * @default false
@@ -1806,7 +1841,7 @@ type TwoColumnShowcaseRowProps = Omit<GridProps, 'direction' | 'container' | 'co
      * Content rendered in the controls column.
      * Accepts any `ReactNode` — form controls, cards, previews, etc.
      */
-    controls: React.ReactNode;
+    controls: React__default.ReactNode;
     /**
      * Controls the visual order and flow direction of the two columns.
      * - `'row'`            → text left,    controls right  (default)
@@ -1867,17 +1902,17 @@ type SectionTitleProps = Omit<BoxProps, 'title'> & {
      */
     txtGradient?: string;
     /** Main heading text. Rendered as an `h2`. */
-    title: ReactNode;
+    title: ReactNode$1;
     /**
      * Short overline label rendered above the heading.
      * Styled as `overline` typography in `text.disabled` colour.
      */
-    caption?: ReactNode;
+    caption?: ReactNode$1;
     /**
      * Supporting description text rendered below the heading.
      * Styled as `body1` in `text.secondary` colour.
      */
-    description?: ReactNode;
+    description?: ReactNode$1;
     /**
      * `sx` overrides for individual text slots.
      */
@@ -1888,7 +1923,7 @@ type SectionTitleProps = Omit<BoxProps, 'title'> & {
     };
 };
 type SectionCaptionProps = {
-    title: ReactNode;
+    title: ReactNode$1;
     sx?: SxProps<Theme>;
 };
 
@@ -1925,7 +1960,7 @@ type FloatingSubNavItem = {
     id: string;
     label: string;
     /** Icon to display inside the button. Pass a `<GiselleIcon />` or any `ReactNode`. */
-    icon: ReactNode;
+    icon: ReactNode$1;
 };
 type FloatingSubNavProps = {
     /** Ordered list of items to display as icon buttons. */
@@ -2252,4 +2287,4 @@ type PersonProfile = {
     notes?: string[];
 };
 
-export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type NestedChecklistState, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel, useNestedChecklist };
+export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type NestedChecklistState, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, type TaskDetails, TaskDetailsRenderer, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel, useNestedChecklist };
