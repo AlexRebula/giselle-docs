@@ -4147,12 +4147,15 @@ var iconActionBarRootSx = {
   display: "flex"
 };
 
-// src/components/action-bar/icon/icon-action-bar.const.tsx
+// src/components/action-bar/icon/icon-action-bar.defaults.tsx
 var import_jsx_runtime36 = require("react/jsx-runtime");
 var DEFAULT_ICON_ACTIONS = [
   { tooltip: "Edit", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:pen-bold" }) },
   { tooltip: "View", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:eye-bold" }) },
-  { tooltip: "Print", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:printer-minimalistic-bold" }) },
+  {
+    tooltip: "Print",
+    icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:printer-minimalistic-bold" })
+  },
   { tooltip: "Send", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "mdi:email" }) },
   { tooltip: "Share", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:share-bold" }) }
 ];
