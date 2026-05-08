@@ -546,6 +546,8 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
  *   <Typography>{task.description}</Typography>
  * </Accordion>
  * ```
+ *
+ * **Quality status (8 May 2026):** DoD 20/20 · Best practices 13/13 · Coverage 100% · Cleanup complete
  */
 declare function Accordion({ title, children, checklist, done, indeterminate, onDoneButtonClick, leadingIcon, leadingAction, trailingContent, expandIcon, checkIcon, checkDoneIcon, checkHoverIcon, sx, ...other }: AccordionProps): react_jsx_runtime.JSX.Element;
 

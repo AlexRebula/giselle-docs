@@ -260,14 +260,8 @@ var summarySx = {
 
 // src/components/accordion/check-icon-button.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
-function FilledCheckCircleIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_SvgIcon.default, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" }) });
-}
-function OutlinedCheckCircleIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_SvgIcon.default, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
-}
-var DEFAULT_CHECK_DONE_ICON = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(FilledCheckCircleIcon, {});
-var DEFAULT_CHECK_HOVER_ICON = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(OutlinedCheckCircleIcon, {});
+var DEFAULT_CHECK_DONE_ICON = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_SvgIcon.default, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" }) });
+var DEFAULT_CHECK_HOVER_ICON = /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(import_SvgIcon.default, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
 function CheckIconButton({
   done,
   checkIcon,
@@ -330,7 +324,24 @@ function Accordion({
   const hasLeadingElement = checklist || leadingIcon !== void 0 || leadingAction !== void 0;
   let leadingElement = null;
   if (checklist) {
-    if (checkIcon !== void 0) {
+    if (checkIcon === void 0) {
+      leadingElement = /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        import_Checkbox.default,
+        {
+          checked: done,
+          indeterminate,
+          onChange: handleCheckboxChange,
+          onClick: handleCheckboxClick,
+          slotProps: {
+            input: {
+              "aria-label": done ? "Mark as not done" : "Mark as done"
+            }
+          },
+          size: "small",
+          sx: checkboxSx
+        }
+      );
+    } else {
       leadingElement = /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         CheckIconButton,
         {
@@ -341,26 +352,11 @@ function Accordion({
           onDoneButtonClick
         }
       );
-    } else {
-      leadingElement = /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        import_Checkbox.default,
-        {
-          checked: done,
-          indeterminate,
-          onChange: handleCheckboxChange,
-          onClick: handleCheckboxClick,
-          inputProps: {
-            "aria-label": done ? "Mark as not done" : "Mark as done"
-          },
-          size: "small",
-          sx: checkboxSx
-        }
-      );
     }
-  } else if (leadingAction !== void 0) {
-    leadingElement = leadingAction;
-  } else {
+  } else if (leadingAction === void 0) {
     leadingElement = /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_Box2.default, { "aria-hidden": "true", sx: leadingIconSx, children: leadingIcon });
+  } else {
+    leadingElement = leadingAction;
   }
   const summaryContent = typeof title === "string" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_Typography.default, { component: "span", variant: "subtitle1", children: title }) : title;
   const accordionSummary = /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
@@ -2367,7 +2363,7 @@ function TimelineDot({
 
 // src/components/timeline/two-column/two-column.tsx
 var import_react13 = require("react");
-var import_Box26 = __toESM(require("@mui/material/Box"), 1);
+var import_Box27 = __toESM(require("@mui/material/Box"), 1);
 var import_Timeline = __toESM(require("@mui/lab/Timeline"), 1);
 
 // src/components/timeline/use-timeline-done-state.ts
@@ -3384,15 +3380,18 @@ var markerPhaseLiSx = {
   zIndex: 1,
   minHeight: 40
 };
-var markerLeftLabelSx = {
+var markerLabelSlotSx = (side) => ({
   flex: 1,
   minWidth: 0,
   overflow: "hidden",
-  display: { xs: "none", md: "flex" },
-  justifyContent: "flex-end",
+  // xs: left slot hidden — label shifts to the right slot on mobile.
+  // Right slot is always visible.
+  display: side === "left" ? { xs: "none", md: "flex" } : "flex",
+  justifyContent: side === "left" ? "flex-end" : "flex-start",
   alignItems: "center",
-  pr: 1.5
-};
+  pr: side === "left" ? 1.5 : 0,
+  pl: side === "right" ? 1.5 : 0
+});
 var markerCenterSx = {
   display: "flex",
   flexDirection: "column",
@@ -3400,14 +3399,20 @@ var markerCenterSx = {
   flexShrink: 0,
   position: "relative"
 };
-var markerRightLabelSx = {
-  flex: 1,
-  minWidth: 0,
-  overflow: "hidden",
+var markerRowInnerSx = {
   display: "flex",
-  justifyContent: "flex-start",
-  alignItems: "center",
-  pl: 1.5
+  flexDirection: "row",
+  alignItems: "center"
+};
+var markerCaptionSx = {
+  color: "text.secondary",
+  fontWeight: 600,
+  whiteSpace: "nowrap"
+};
+var markerDateSpanSx = {
+  ml: 0.75,
+  fontWeight: 400,
+  opacity: 0.7
 };
 var phaseRowSx = (blurred) => ({
   display: "flex",
@@ -3464,21 +3469,6 @@ var timelineRootSx = {
   m: 0,
   overflowX: "hidden",
   "& .MuiTimelineItem-root:before": { flex: 0, padding: 0 }
-};
-var markerRowInnerSx = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center"
-};
-var markerCaptionSx = {
-  color: "text.secondary",
-  fontWeight: 600,
-  whiteSpace: "nowrap"
-};
-var markerDateSpanSx = {
-  ml: 0.75,
-  fontWeight: 400,
-  opacity: 0.7
 };
 var phaseDotWrapperSx = {
   position: "relative",
@@ -3600,13 +3590,26 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
 }
 
 // src/components/timeline/two-column/marker-row.tsx
-var import_Box23 = __toESM(require("@mui/material/Box"), 1);
+var import_Box24 = __toESM(require("@mui/material/Box"), 1);
 var import_Tooltip6 = __toESM(require("@mui/material/Tooltip"), 1);
-var import_Typography17 = __toESM(require("@mui/material/Typography"), 1);
 
-// src/components/timeline/two-column/spine-connector/spine-connector.tsx
+// src/components/timeline/two-column/marker-label.tsx
 var import_Box22 = __toESM(require("@mui/material/Box"), 1);
 var import_Typography16 = __toESM(require("@mui/material/Typography"), 1);
+var import_jsx_runtime30 = require("react/jsx-runtime");
+function MarkerLabel({ title, date }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_Typography16.default, { variant: "caption", sx: markerCaptionSx, children: [
+    title,
+    date && /* @__PURE__ */ (0, import_jsx_runtime30.jsxs)(import_Box22.default, { component: "span", sx: markerDateSpanSx, children: [
+      "\xB7 ",
+      date
+    ] })
+  ] });
+}
+
+// src/components/timeline/two-column/spine-connector/spine-connector.tsx
+var import_Box23 = __toESM(require("@mui/material/Box"), 1);
+var import_Typography17 = __toESM(require("@mui/material/Typography"), 1);
 
 // src/components/timeline/two-column/spine-connector/spine-connector.styles.ts
 var yearLabelSx = (marginBottom) => ({
@@ -3631,7 +3634,7 @@ var yearLabelSx = (marginBottom) => ({
 });
 
 // src/components/timeline/two-column/spine-connector/spine-connector.tsx
-var import_jsx_runtime30 = require("react/jsx-runtime");
+var import_jsx_runtime31 = require("react/jsx-runtime");
 function SpineConnector({
   dotColor,
   yearMilestone,
@@ -3639,8 +3642,8 @@ function SpineConnector({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(
-    import_Box22.default,
+  return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(
+    import_Box23.default,
     {
       ...other,
       sx: [
@@ -3654,13 +3657,13 @@ function SpineConnector({
         }),
         ...Array.isArray(sx) ? sx : [sx]
       ],
-      children: yearMilestone && /* @__PURE__ */ (0, import_jsx_runtime30.jsx)(import_Typography16.default, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
+      children: yearMilestone && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(import_Typography17.default, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
     }
   );
 }
 
 // src/components/timeline/two-column/marker-row.tsx
-var import_jsx_runtime31 = require("react/jsx-runtime");
+var import_jsx_runtime32 = require("react/jsx-runtime");
 function MarkerRow({
   phase,
   isLastPhase,
@@ -3668,50 +3671,40 @@ function MarkerRow({
   isDone,
   checklist,
   yearLabelValue,
-  isMobile
+  isMobile,
+  ...other
 }) {
   const markerTooltip = resolvePhaseTooltip(checklist, dotColor, isDone, phase);
-  return /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(import_Box23.default, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Box23.default, { sx: markerRowInnerSx, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(import_Box23.default, { sx: markerLeftLabelSx, children: phase.side === "left" && /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Typography17.default, { variant: "caption", sx: markerCaptionSx, children: [
-      phase.shortTitle ?? phase.title,
-      phase.date && /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Box23.default, { component: "span", sx: markerDateSpanSx, children: [
-        "\xB7 ",
-        phase.date
-      ] })
-    ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Box23.default, { "data-col": "center", sx: markerCenterSx, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(import_Tooltip6.default, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(TimelineDot, { icon: phase.icon, color: dotColor, size: "milestone", done: isDone }) }) }),
-      !isLastPhase && /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
+  const shouldShowRightLabel = phase.side !== "left" || isMobile;
+  return /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(import_Box24.default, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, ...other, children: /* @__PURE__ */ (0, import_jsx_runtime32.jsxs)(import_Box24.default, { sx: markerRowInnerSx, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(import_Box24.default, { sx: markerLabelSlotSx("left"), children: phase.side === "left" && /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsxs)(import_Box24.default, { "data-col": "center", sx: markerCenterSx, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(import_Tooltip6.default, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ (0, import_jsx_runtime32.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(TimelineDot, { icon: phase.icon, color: dotColor, size: "milestone", done: isDone }) }) }),
+      !isLastPhase && /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime31.jsx)(import_Box23.default, { sx: markerRightLabelSx, children: (phase.side !== "left" || isMobile) && /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Typography17.default, { variant: "caption", sx: markerCaptionSx, children: [
-      phase.shortTitle ?? phase.title,
-      phase.date && /* @__PURE__ */ (0, import_jsx_runtime31.jsxs)(import_Box23.default, { component: "span", sx: markerDateSpanSx, children: [
-        "\xB7 ",
-        phase.date
-      ] })
-    ] }) })
+    /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(import_Box24.default, { sx: markerLabelSlotSx("right"), children: shouldShowRightLabel && /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) })
   ] }) });
 }
 
 // src/components/timeline/two-column/phase-row.tsx
-var import_Box25 = __toESM(require("@mui/material/Box"), 1);
+var import_Box26 = __toESM(require("@mui/material/Box"), 1);
 var import_Tooltip7 = __toESM(require("@mui/material/Tooltip"), 1);
 var import_Typography18 = __toESM(require("@mui/material/Typography"), 1);
 
 // src/components/timeline/two-column/timeline-column.tsx
-var import_Box24 = __toESM(require("@mui/material/Box"), 1);
-var import_jsx_runtime32 = require("react/jsx-runtime");
+var import_Box25 = __toESM(require("@mui/material/Box"), 1);
+var import_jsx_runtime33 = require("react/jsx-runtime");
 function TimelineColumn({
   columnSide,
   hasContent,
   children,
   bottomPadding
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime32.jsx)(import_Box24.default, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
+  return /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(import_Box25.default, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
 }
 
 // src/components/timeline/two-column/phase-row.tsx
-var import_jsx_runtime33 = require("react/jsx-runtime");
+var import_jsx_runtime34 = require("react/jsx-runtime");
 function PhaseRow({
   phase,
   isSuppressed,
@@ -3730,8 +3723,8 @@ function PhaseRow({
   selectedPhaseKey,
   isMobile
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(import_Box25.default, { sx: phaseRowSx(isSuppressed), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime34.jsxs)(import_Box26.default, { sx: phaseRowSx(isSuppressed), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
       TimelineColumn,
       {
         columnSide: "left",
@@ -3740,16 +3733,16 @@ function PhaseRow({
         children: !isMobile && phase.side === "left" && phaseCardNode
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(import_Box25.default, { "data-col": "center", sx: centerColumnSx, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime33.jsxs)(import_Box25.default, { sx: phaseDotWrapperSx, children: [
-        !phase.hideDate && phase.date && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(import_Typography18.default, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
-        /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime34.jsxs)(import_Box26.default, { "data-col": "center", sx: centerColumnSx, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime34.jsxs)(import_Box26.default, { sx: phaseDotWrapperSx, children: [
+        !phase.hideDate && phase.date && /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(import_Typography18.default, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
+        /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
           import_Tooltip7.default,
           {
             title: resolvePhaseTooltip(checklist, dotColor, isDone, phase),
             placement: "top",
             arrow: true,
-            children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+            children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
               TimelineDot,
               {
                 icon: phase.icon,
@@ -3770,7 +3763,7 @@ function PhaseRow({
           }
         )
       ] }),
-      !isLastPhase && /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+      !isLastPhase && /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
         SpineConnector,
         {
           dotColor,
@@ -3779,7 +3772,7 @@ function PhaseRow({
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime33.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
       TimelineColumn,
       {
         columnSide: "right",
@@ -3792,7 +3785,7 @@ function PhaseRow({
 }
 
 // src/components/timeline/two-column/two-column.tsx
-var import_jsx_runtime34 = require("react/jsx-runtime");
+var import_jsx_runtime35 = require("react/jsx-runtime");
 var useIsomorphicLayoutEffect = globalThis.window === void 0 ? import_react13.useEffect : import_react13.useLayoutEffect;
 var EMPTY_VIEWED_KEYS = /* @__PURE__ */ new Set();
 function TimelineTwoColumn({
@@ -3975,8 +3968,8 @@ function TimelineTwoColumn({
     });
   }, [sorted]);
   const effectiveViewedKeys = viewedKeys ?? EMPTY_VIEWED_KEYS;
-  return /* @__PURE__ */ (0, import_jsx_runtime34.jsxs)(import_jsx_runtime34.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(import_Box26.default, { sx: { display: { xs: "block", md: "none" } }, children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime35.jsxs)(import_jsx_runtime35.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(import_Box27.default, { sx: { display: { xs: "block", md: "none" } }, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
       TimelineCompact,
       {
         phases,
@@ -3991,18 +3984,18 @@ function TimelineTwoColumn({
         ...other
       }
     ) }),
-    /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
-      import_Box26.default,
+    /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
+      import_Box27.default,
       {
         sx: [
           { display: { xs: "none", md: "block" }, position: "relative" },
           ...Array.isArray(sx) ? sx : [sx]
         ],
         ...other,
-        children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(import_Timeline.default, { sx: timelineRootSx, children: sorted.map((phase, i) => {
+        children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(import_Timeline.default, { sx: timelineRootSx, children: sorted.map((phase, i) => {
           const { isDone, isOverdue, dotColor, yearLabelValue, phaseMilestones, isLastPhase } = resolvePhaseState(phase, i, sorted, lastKey, checklist, localPhaseDone, today);
           if (phase.variant === "marker") {
-            return /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+            return /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               MarkerRow,
               {
                 phase,
@@ -4026,7 +4019,7 @@ function TimelineTwoColumn({
           const expandedMiIdx = expandedMilestoneMap[String(phase.key)] ?? null;
           const isThisPhaseExpanded = expandedPhaseKey === phase.key;
           const phaseViewKey = `phase-${phase.key}`;
-          const phaseCardNode = /* @__PURE__ */ (0, import_jsx_runtime34.jsx)("div", { onClick: stopCardPropagation, children: /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+          const phaseCardNode = /* @__PURE__ */ (0, import_jsx_runtime35.jsx)("div", { onClick: stopCardPropagation, children: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
             PhaseCard,
             {
               phase,
@@ -4084,7 +4077,7 @@ function TimelineTwoColumn({
             yearLabelMarginBottom + 80
           ) : Math.max(milestoneSlotHeight, msSlotHeights[String(phase.key)] ?? 0)) : void 0;
           rows.push(
-            /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
               PhaseRow,
               {
                 phase,
@@ -4109,7 +4102,7 @@ function TimelineTwoColumn({
           );
           phaseMilestones.forEach((ms, mi) => {
             rows.push(
-              /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
                 MilestoneRow,
                 {
                   ms,
@@ -4122,8 +4115,8 @@ function TimelineTwoColumn({
               )
             );
           });
-          return /* @__PURE__ */ (0, import_jsx_runtime34.jsx)(
-            import_Box26.default,
+          return /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(
+            import_Box27.default,
             {
               component: "li",
               "data-testid": "tl-item",
@@ -4142,7 +4135,7 @@ function TimelineTwoColumn({
 }
 
 // src/components/action-bar/icon/icon-action-bar.tsx
-var import_Box27 = __toESM(require("@mui/material/Box"), 1);
+var import_Box28 = __toESM(require("@mui/material/Box"), 1);
 var import_Tooltip8 = __toESM(require("@mui/material/Tooltip"), 1);
 var import_IconButton4 = __toESM(require("@mui/material/IconButton"), 1);
 
@@ -4155,23 +4148,23 @@ var iconActionBarRootSx = {
 };
 
 // src/components/action-bar/icon/icon-action-bar.const.tsx
-var import_jsx_runtime35 = require("react/jsx-runtime");
+var import_jsx_runtime36 = require("react/jsx-runtime");
 var DEFAULT_ICON_ACTIONS = [
-  { tooltip: "Edit", icon: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(GiselleIcon, { icon: "solar:pen-bold" }) },
-  { tooltip: "View", icon: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(GiselleIcon, { icon: "solar:eye-bold" }) },
-  { tooltip: "Print", icon: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(GiselleIcon, { icon: "solar:printer-minimalistic-bold" }) },
-  { tooltip: "Send", icon: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(GiselleIcon, { icon: "mdi:email" }) },
-  { tooltip: "Share", icon: /* @__PURE__ */ (0, import_jsx_runtime35.jsx)(GiselleIcon, { icon: "solar:share-bold" }) }
+  { tooltip: "Edit", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:pen-bold" }) },
+  { tooltip: "View", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:eye-bold" }) },
+  { tooltip: "Print", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:printer-minimalistic-bold" }) },
+  { tooltip: "Send", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "mdi:email" }) },
+  { tooltip: "Share", icon: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(GiselleIcon, { icon: "solar:share-bold" }) }
 ];
 
 // src/components/action-bar/icon/icon-action-bar.tsx
-var import_jsx_runtime36 = require("react/jsx-runtime");
+var import_jsx_runtime37 = require("react/jsx-runtime");
 function IconActionBar({
   actions = DEFAULT_ICON_ACTIONS,
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(import_Box27.default, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Box28.default, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
     const label = item["aria-label"] ?? item.tooltip;
     const buttonProps = {
       onClick: item.onClick,
@@ -4180,12 +4173,12 @@ function IconActionBar({
       ...item.component !== void 0 && { component: item.component },
       ...item.href !== void 0 && { href: item.href }
     };
-    return /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(
       import_Tooltip8.default,
       {
         title: item.tooltip,
         placement: item.tooltipPlacement ?? "bottom",
-        children: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime36.jsx)(import_IconButton4.default, { ...buttonProps, children: item.icon }) })
+        children: /* @__PURE__ */ (0, import_jsx_runtime37.jsx)("span", { children: /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_IconButton4.default, { ...buttonProps, children: item.icon }) })
       },
       `${item.tooltip}-${index}`
     );
@@ -4193,11 +4186,11 @@ function IconActionBar({
 }
 
 // src/components/layout/two-column-showcase-row/two-column-showcase-row.tsx
-var import_Box28 = __toESM(require("@mui/material/Box"), 1);
+var import_Box29 = __toESM(require("@mui/material/Box"), 1);
 var import_Grid = __toESM(require("@mui/material/Grid"), 1);
 var import_Stack2 = __toESM(require("@mui/material/Stack"), 1);
 var import_Typography19 = __toESM(require("@mui/material/Typography"), 1);
-var import_jsx_runtime37 = require("react/jsx-runtime");
+var import_jsx_runtime38 = require("react/jsx-runtime");
 function TwoColumnShowcaseRow({
   text,
   controls,
@@ -4210,7 +4203,7 @@ function TwoColumnShowcaseRow({
 }) {
   const isVertical = orientation === "column" || orientation === "column-reverse";
   const itemSize = isVertical ? { xs: 12 } : { xs: 12, md: 6 };
-  return /* @__PURE__ */ (0, import_jsx_runtime37.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime38.jsxs)(
     import_Grid.default,
     {
       container: true,
@@ -4220,19 +4213,19 @@ function TwoColumnShowcaseRow({
       sx: [{}, ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children: [
-        text && /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Grid.default, { size: itemSize, children: /* @__PURE__ */ (0, import_jsx_runtime37.jsxs)(
+        text && /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Grid.default, { size: itemSize, children: /* @__PURE__ */ (0, import_jsx_runtime38.jsxs)(
           import_Stack2.default,
           {
             spacing: 2,
             sx: [{ maxWidth: 520 }, ...Array.isArray(textSx) ? textSx : [textSx]],
             children: [
-              text.overline && /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Typography19.default, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
-              text.heading && /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Typography19.default, { variant: "h4", children: text.heading }),
-              text.description && /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Typography19.default, { variant: "body1", color: "text.secondary", children: text.description })
+              text.overline && /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Typography19.default, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
+              text.heading && /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Typography19.default, { variant: "h4", children: text.heading }),
+              text.description && /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Typography19.default, { variant: "body1", color: "text.secondary", children: text.description })
             ]
           }
         ) }),
-        /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Grid.default, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Grid.default, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(
           import_Stack2.default,
           {
             spacing: 2,
@@ -4240,7 +4233,7 @@ function TwoColumnShowcaseRow({
               { alignItems: controlsAlign, width: 1, minWidth: 0 },
               ...Array.isArray(controlsSx) ? controlsSx : [controlsSx]
             ],
-            children: /* @__PURE__ */ (0, import_jsx_runtime37.jsx)(import_Box28.default, { sx: { width: 1, minWidth: 0 }, children: controls })
+            children: /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(import_Box29.default, { sx: { width: 1, minWidth: 0 }, children: controls })
           }
         ) })
       ]
@@ -4249,7 +4242,7 @@ function TwoColumnShowcaseRow({
 }
 
 // src/components/layout/section-title/section-title.tsx
-var import_Box30 = __toESM(require("@mui/material/Box"), 1);
+var import_Box31 = __toESM(require("@mui/material/Box"), 1);
 var import_Typography20 = __toESM(require("@mui/material/Typography"), 1);
 
 // src/components/layout/section-title/section-title.styles.ts
@@ -4264,11 +4257,11 @@ var txtGradientSpanSx = (theme) => ({
 });
 
 // src/components/layout/section-title/section-caption.tsx
-var import_Box29 = __toESM(require("@mui/material/Box"), 1);
-var import_jsx_runtime38 = require("react/jsx-runtime");
+var import_Box30 = __toESM(require("@mui/material/Box"), 1);
+var import_jsx_runtime39 = require("react/jsx-runtime");
 function SectionCaption({ title, sx, ...other }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime38.jsx)(
-    import_Box29.default,
+  return /* @__PURE__ */ (0, import_jsx_runtime39.jsx)(
+    import_Box30.default,
     {
       component: "span",
       sx: [
@@ -4285,7 +4278,7 @@ function SectionCaption({ title, sx, ...other }) {
 }
 
 // src/components/layout/section-title/section-title.tsx
-var import_jsx_runtime39 = require("react/jsx-runtime");
+var import_jsx_runtime40 = require("react/jsx-runtime");
 function SectionTitle({
   sx,
   title,
@@ -4295,8 +4288,8 @@ function SectionTitle({
   description,
   ...other
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime39.jsxs)(
-    import_Box30.default,
+  return /* @__PURE__ */ (0, import_jsx_runtime40.jsxs)(
+    import_Box31.default,
     {
       sx: [
         {
@@ -4308,14 +4301,14 @@ function SectionTitle({
       ],
       ...other,
       children: [
-        caption && /* @__PURE__ */ (0, import_jsx_runtime39.jsx)(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
-        /* @__PURE__ */ (0, import_jsx_runtime39.jsxs)(import_Typography20.default, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
+        caption && /* @__PURE__ */ (0, import_jsx_runtime40.jsx)(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
+        /* @__PURE__ */ (0, import_jsx_runtime40.jsxs)(import_Typography20.default, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
           title,
           " ",
-          txtGradient && /* @__PURE__ */ (0, import_jsx_runtime39.jsx)(import_Box30.default, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
+          txtGradient && /* @__PURE__ */ (0, import_jsx_runtime40.jsx)(import_Box31.default, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
         ] }),
-        description && /* @__PURE__ */ (0, import_jsx_runtime39.jsx)(
-          import_Box30.default,
+        description && /* @__PURE__ */ (0, import_jsx_runtime40.jsx)(
+          import_Box31.default,
           {
             sx: [
               { color: "text.secondary", typography: "body1" },
@@ -4332,7 +4325,7 @@ function SectionTitle({
 // src/components/nav/floating-sub-nav/floating-sub-nav.tsx
 var import_react15 = require("react");
 var import_framer_motion2 = require("framer-motion");
-var import_Box31 = __toESM(require("@mui/material/Box"), 1);
+var import_Box32 = __toESM(require("@mui/material/Box"), 1);
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.styles.ts
 var grey500Ch = (theme) => theme.vars.palette.grey["500Channel"];
@@ -4425,10 +4418,10 @@ var import_Stack3 = __toESM(require("@mui/material/Stack"), 1);
 var import_react14 = require("react");
 var import_Tooltip9 = __toESM(require("@mui/material/Tooltip"), 1);
 var import_ButtonBase2 = __toESM(require("@mui/material/ButtonBase"), 1);
-var import_jsx_runtime40 = require("react/jsx-runtime");
+var import_jsx_runtime41 = require("react/jsx-runtime");
 function SubNavButton({ item, isActive, onPress }) {
   const handleClick = (0, import_react14.useCallback)(() => onPress(item.id), [onPress, item.id]);
-  return /* @__PURE__ */ (0, import_jsx_runtime40.jsx)(import_Tooltip9.default, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ (0, import_jsx_runtime40.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(import_Tooltip9.default, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(
     import_ButtonBase2.default,
     {
       disableRipple: true,
@@ -4444,16 +4437,16 @@ function SubNavButton({ item, isActive, onPress }) {
 }
 
 // src/components/nav/floating-sub-nav/nav-pill.tsx
-var import_jsx_runtime41 = require("react/jsx-runtime");
+var import_jsx_runtime42 = require("react/jsx-runtime");
 function NavPill({ items, activeId, onPress }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(
     import_framer_motion.motion.div,
     {
       initial: { opacity: 0, y: 20 },
       animate: { opacity: 1, y: 0 },
       exit: { opacity: 0, y: 10 },
       transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
-      children: /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(
         import_Stack3.default,
         {
           direction: "column",
@@ -4461,7 +4454,7 @@ function NavPill({ items, activeId, onPress }) {
           role: "navigation",
           "aria-label": "Section navigation",
           sx: pillSx,
-          children: /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(import_Stack3.default, { direction: "row", spacing: 0.5, children: items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime41.jsx)(
+          children: /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_Stack3.default, { direction: "row", spacing: 0.5, children: items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(
             SubNavButton,
             {
               item,
@@ -4477,18 +4470,18 @@ function NavPill({ items, activeId, onPress }) {
 }
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.tsx
-var import_jsx_runtime42 = require("react/jsx-runtime");
+var import_jsx_runtime43 = require("react/jsx-runtime");
 function FloatingSubNav({ items, activeId, onSelect, sticky = false }) {
   const handlePress = (0, import_react15.useCallback)((id) => onSelect(id), [onSelect]);
   if (sticky) {
-    return /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_Box31.default, { sx: stickyWrapperSx, children: /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_Box31.default, { sx: stickyInnerSx, children: /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_framer_motion2.AnimatePresence, { children: activeId !== null && /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(NavPill, { items, activeId, onPress: handlePress }) }) }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_Box32.default, { sx: stickyWrapperSx, children: /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_Box32.default, { sx: stickyInnerSx, children: /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_framer_motion2.AnimatePresence, { children: activeId !== null && /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(NavPill, { items, activeId, onPress: handlePress }) }) }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_framer_motion2.AnimatePresence, { children: activeId !== null && /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(import_Box31.default, { sx: fixedWrapperSx, children: /* @__PURE__ */ (0, import_jsx_runtime42.jsx)(NavPill, { items, activeId, onPress: handlePress }) }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_framer_motion2.AnimatePresence, { children: activeId !== null && /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_Box32.default, { sx: fixedWrapperSx, children: /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(NavPill, { items, activeId, onPress: handlePress }) }) });
 }
 
 // src/components/layout/section-container/section-container.tsx
 var import_Container = __toESM(require("@mui/material/Container"), 1);
-var import_jsx_runtime43 = require("react/jsx-runtime");
+var import_jsx_runtime44 = require("react/jsx-runtime");
 function SectionContainer({
   children,
   maxWidth = "lg",
@@ -4496,7 +4489,7 @@ function SectionContainer({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime43.jsx)(import_Container.default, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
+  return /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Container.default, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
 }
 
 // src/utils/maturity-utils.ts
@@ -4534,7 +4527,7 @@ var import_Card2 = __toESM(require("@mui/material/Card"), 1);
 var import_CardContent = __toESM(require("@mui/material/CardContent"), 1);
 var import_CardHeader = __toESM(require("@mui/material/CardHeader"), 1);
 var import_Divider3 = __toESM(require("@mui/material/Divider"), 1);
-var import_Box32 = __toESM(require("@mui/material/Box"), 1);
+var import_Box33 = __toESM(require("@mui/material/Box"), 1);
 var import_Typography21 = __toESM(require("@mui/material/Typography"), 1);
 var import_styles2 = require("@mui/material/styles");
 
@@ -4620,7 +4613,7 @@ var legendDotSx = (color) => ({
 });
 
 // src/components/chart/radial-progress/radial-progress-card.tsx
-var import_jsx_runtime44 = require("react/jsx-runtime");
+var import_jsx_runtime45 = require("react/jsx-runtime");
 var ReactApexChart = (0, import_react16.lazy)(() => import("react-apexcharts"));
 function RadialProgressCard({
   title,
@@ -4643,10 +4636,10 @@ function RadialProgressCard({
     () => buildRadialProgressOptions(theme, chartLabels, resolvedColors, total, totalLabel),
     [theme, chartLabels, resolvedColors, total, totalLabel]
   );
-  return /* @__PURE__ */ (0, import_jsx_runtime44.jsxs)(import_Card2.default, { sx: [{}, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    (title !== void 0 || subheader !== void 0) && /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_CardHeader.default, { title, subheader }),
-    /* @__PURE__ */ (0, import_jsx_runtime44.jsxs)(import_CardContent.default, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Box32.default, { sx: chartWrapSx, children: /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_react16.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Box32.default, { sx: { height: chartHeight } }), children: /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime45.jsxs)(import_Card2.default, { sx: [{}, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    (title !== void 0 || subheader !== void 0) && /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_CardHeader.default, { title, subheader }),
+    /* @__PURE__ */ (0, import_jsx_runtime45.jsxs)(import_CardContent.default, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Box33.default, { sx: chartWrapSx, children: /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_react16.Suspense, { fallback: /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Box33.default, { sx: { height: chartHeight } }), children: /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(
         ReactApexChart,
         {
           type: "radialBar",
@@ -4656,11 +4649,11 @@ function RadialProgressCard({
           height: chartHeight
         }
       ) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Divider3.default, { sx: { my: 2 } }),
-      /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Box32.default, { sx: legendRowSx, children: series.map((item, i) => /* @__PURE__ */ (0, import_jsx_runtime44.jsxs)(import_Box32.default, { sx: legendItemSx, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Box32.default, { sx: legendDotSx(resolvedColors[i] ?? theme.palette.primary.main) }),
-        /* @__PURE__ */ (0, import_jsx_runtime44.jsx)(import_Typography21.default, { variant: "subtitle2", children: item.label }),
-        /* @__PURE__ */ (0, import_jsx_runtime44.jsxs)(import_Typography21.default, { variant: "caption", sx: legendValueSx, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Divider3.default, { sx: { my: 2 } }),
+      /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Box33.default, { sx: legendRowSx, children: series.map((item, i) => /* @__PURE__ */ (0, import_jsx_runtime45.jsxs)(import_Box33.default, { sx: legendItemSx, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Box33.default, { sx: legendDotSx(resolvedColors[i] ?? theme.palette.primary.main) }),
+        /* @__PURE__ */ (0, import_jsx_runtime45.jsx)(import_Typography21.default, { variant: "subtitle2", children: item.label }),
+        /* @__PURE__ */ (0, import_jsx_runtime45.jsxs)(import_Typography21.default, { variant: "caption", sx: legendValueSx, children: [
           item.value,
           "%"
         ] })
