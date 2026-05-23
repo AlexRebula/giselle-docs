@@ -25,12 +25,17 @@ __export(utils_index_exports, {
   GISELLE_SECONDARY_MAIN: () => GISELLE_SECONDARY_MAIN,
   assignMilestoneSidesByDone: () => assignMilestoneSidesByDone,
   channelAlpha: () => channelAlpha,
+  getCookieValue: () => getCookieValue,
   giselleTheme: () => giselleTheme,
+  giselleThemeOptions: () => giselleThemeOptions,
   hexToChannel: () => hexToChannel,
+  isDeepEqual: () => isDeepEqual,
   pxToRem: () => pxToRem,
   remToPx: () => remToPx,
   resolveMaturityColor: () => resolveMaturityColor,
-  resolveMaturityLabel: () => resolveMaturityLabel
+  resolveMaturityLabel: () => resolveMaturityLabel,
+  setCookieValue: () => setCookieValue,
+  useImagePreloader: () => useImagePreloader
 });
 module.exports = __toCommonJS(utils_index_exports);
 
@@ -56,6 +61,60 @@ function pxToRem(px) {
 }
 function remToPx(rem) {
   return rem * 16;
+}
+
+// src/utils/is-deep-equal.ts
+function isDeepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!isDeepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (typeof a === "object") {
+    if (Array.isArray(b)) return false;
+    const objA = a;
+    const objB = b;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(objB, key)) return false;
+      if (!isDeepEqual(objA[key], objB[key])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// src/utils/cookie.ts
+function getCookieValue(name) {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.split("; ").find((row) => row.startsWith(`${encodeURIComponent(name)}=`));
+  if (!match) return null;
+  const raw = match.split("=").slice(1).join("=");
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+function setCookieValue(name, value, options = {}) {
+  if (typeof document === "undefined") return;
+  const { maxAge, path = "/", sameSite = "Lax" } = options;
+  const parts = [
+    `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+    `path=${path}`,
+    `SameSite=${sameSite}`
+  ];
+  if (maxAge !== void 0) parts.push(`max-age=${maxAge}`);
+  if (sameSite === "None") parts.push("Secure");
+  document.cookie = parts.join("; ");
 }
 
 // src/utils/maturity-utils.ts
@@ -92,7 +151,7 @@ var import_styles = require("@mui/material/styles");
 var GISELLE_PRIMARY_MAIN = "#2E7D32";
 var GISELLE_PRIMARY_DARK_MAIN = "#76C442";
 var GISELLE_SECONDARY_MAIN = "#F5A623";
-var giselleTheme = (0, import_styles.extendTheme)({
+var giselleThemeOptions = {
   colorSchemes: {
     light: {
       palette: {
@@ -115,7 +174,21 @@ var giselleTheme = (0, import_styles.extendTheme)({
       }
     }
   }
-});
+};
+var giselleTheme = (0, import_styles.extendTheme)(giselleThemeOptions);
+
+// src/utils/use-image-preloader.ts
+var import_react_dom = require("react-dom");
+function useImagePreloader(srcs, highPrioritySrc) {
+  srcs.forEach((src) => {
+    if (src) {
+      (0, import_react_dom.preload)(src, {
+        as: "image",
+        fetchPriority: src === highPrioritySrc ? "high" : "auto"
+      });
+    }
+  });
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   GISELLE_PRIMARY_DARK_MAIN,
@@ -123,11 +196,16 @@ var giselleTheme = (0, import_styles.extendTheme)({
   GISELLE_SECONDARY_MAIN,
   assignMilestoneSidesByDone,
   channelAlpha,
+  getCookieValue,
   giselleTheme,
+  giselleThemeOptions,
   hexToChannel,
+  isDeepEqual,
   pxToRem,
   remToPx,
   resolveMaturityColor,
-  resolveMaturityLabel
+  resolveMaturityLabel,
+  setCookieValue,
+  useImagePreloader
 });
 //# sourceMappingURL=utils.cjs.map

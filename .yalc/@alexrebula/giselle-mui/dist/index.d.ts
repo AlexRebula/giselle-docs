@@ -1,18 +1,18 @@
 import * as _mui_material_styles from '@mui/material/styles';
-import { SxProps, Theme } from '@mui/material/styles';
+import { CssVarsThemeOptions, CssVarsTheme, SxProps, Theme } from '@mui/material/styles';
 import * as react_jsx_runtime from 'react/jsx-runtime';
-import { IconProps } from '@iconify/react';
 import * as React from 'react';
 import React__default, { ReactNode as ReactNode$1 } from 'react';
+import { IconProps } from '@iconify/react';
 import { AccordionProps as AccordionProps$1 } from '@mui/material/Accordion';
+import { IconButtonProps } from '@mui/material/IconButton';
 import { BoxProps } from '@mui/material/Box';
 import { PaperProps } from '@mui/material/Paper';
 import { ButtonBaseProps } from '@mui/material/ButtonBase';
 import { CardProps } from '@mui/material/Card';
-import { TimelineDotProps } from '@mui/lab/TimelineDot';
-import { IconButtonProps } from '@mui/material/IconButton';
-import { TooltipProps } from '@mui/material/Tooltip';
 import { GridProps } from '@mui/material/Grid';
+import { TimelineDotProps } from '@mui/lab/TimelineDot';
+import { TooltipProps } from '@mui/material/Tooltip';
 import { StackProps } from '@mui/material/Stack';
 import { ContainerProps } from '@mui/material/Container';
 import { ApexOptions } from 'apexcharts';
@@ -191,16 +191,56 @@ declare function pxToRem(px: number): string;
 declare function remToPx(rem: number): number;
 
 /**
- * Giselle brand theme preset for MUI v7 CSS Variables mode.
+ * Recursive deep equality check for plain values.
  *
- * Defines the Giselle ecosystem's default palette as a ready-to-use
- * `extendTheme()` result. Pass directly to `ThemeProvider` or use the
- * zero-config `GiselleThemeProvider` wrapper (Phase C).
+ * Covers the full set of value types produced by `GiselleSettingsProvider` state:
+ * - Primitives: `string`, `number`, `boolean`, `null`, `undefined`
+ * - Plain arrays (element-by-element comparison)
+ * - Plain objects (own enumerable key comparison, recursive)
  *
- * **Brand palette — the Carabao mango tree:**
- * - Primary   — Deep grove green `#2E7D32` (Lime `#76C442` in dark mode)
- * - Secondary — Mango gold `#F5A623`
+ * Out of scope (not needed for settings state): `Date`, `Map`, `Set`, `RegExp`,
+ * `Symbol`, class instances. If passed, these are compared by reference only.
  */
+declare function isDeepEqual(a: unknown, b: unknown): boolean;
+
+type SetCookieOptions = {
+    /** Max age in seconds. */
+    maxAge?: number;
+    /** Cookie path. @default '/' */
+    path?: string;
+    /** SameSite policy. @default 'Lax' */
+    sameSite?: 'Strict' | 'Lax' | 'None';
+};
+/**
+ * Reads a cookie value by name.
+ *
+ * SSR-safe: returns `null` when called outside a browser context
+ * (`typeof document === 'undefined'`).
+ */
+declare function getCookieValue(name: string): string | null;
+/**
+ * Writes a cookie value.
+ *
+ * SSR-safe: no-op when called outside a browser context.
+ */
+declare function setCookieValue(name: string, value: string, options?: SetCookieOptions): void;
+
+type UseLocalStorageReturn<T> = {
+    state: T;
+    setState: (partial: Partial<T>) => void;
+    setField: <K extends keyof T>(key: K, value: T[K]) => void;
+    resetState: (defaults: T) => void;
+};
+/**
+ * SSR-safe React hook for persisting state in `localStorage`.
+ *
+ * - Reads from storage on mount; falls back to `initialValue` when nothing is stored.
+ * - Writes to storage on every state change.
+ * - Provides `setState` (partial merge), `setField` (single typed key), and `resetState`.
+ * - Safe to call in a Next.js RSC tree — `window` access is guarded server-side.
+ */
+declare function useLocalStorage<T extends object>(key: string, initialValue: T): UseLocalStorageReturn<T>;
+
 /**
  * Giselle brand primary colour — Deep grove green `#2E7D32`.
  *
@@ -222,6 +262,14 @@ declare const GISELLE_PRIMARY_DARK_MAIN = "#76C442";
  */
 declare const GISELLE_SECONDARY_MAIN = "#F5A623";
 /**
+ * The Giselle brand theme options — the raw input to `extendTheme()`.
+ *
+ * Use this constant when you need to deep-merge Giselle palette defaults
+ * with consumer overrides before resolving the final theme. Prefer
+ * `giselleTheme` when you only need the already-resolved theme object.
+ */
+declare const giselleThemeOptions: CssVarsThemeOptions;
+/**
  * The Giselle brand theme preset.
  *
  * A ready-to-use result of `extendTheme()` carrying the full Giselle palette
@@ -237,7 +285,7 @@ declare const GISELLE_SECONDARY_MAIN = "#F5A623";
  * </ThemeProvider>
  * ```
  *
- * **Usage — via `GiselleThemeProvider` (Phase C, zero-config):**
+ * **Usage — via `GiselleThemeProvider` (zero-config):**
  * ```tsx
  * import { GiselleThemeProvider } from '@alexrebula/giselle-mui';
  *
@@ -256,15 +304,361 @@ declare const GISELLE_SECONDARY_MAIN = "#F5A623";
  */
 declare const giselleTheme: Omit<_mui_material_styles.Theme, "applyStyles"> & _mui_material_styles.CssVarsTheme;
 
+interface GiselleThemeProviderProps {
+    /** Child components that will receive the Giselle theme. */
+    children: ReactNode$1;
+    /**
+     * Partial theme options deep-merged on top of the Giselle brand defaults.
+     *
+     * Use for targeted adjustments — swapping the primary colour, adjusting typography
+     * scale — while keeping the rest of the Giselle palette intact.
+     *
+     * Ignored when `theme` is provided.
+     *
+     * **Example — override primary to blue:**
+     * ```tsx
+     * <GiselleThemeProvider
+     *   themeOverrides={{ colorSchemes: { light: { palette: { primary: { main: '#1976d2' } } } } }}
+     * >
+     *   <App />
+     * </GiselleThemeProvider>
+     * ```
+     */
+    themeOverrides?: CssVarsThemeOptions;
+    /**
+     * A fully custom theme created with `extendTheme()`. When provided,
+     * `themeOverrides` is ignored and this theme is used as-is.
+     *
+     * **Example:**
+     * ```tsx
+     * import { extendTheme } from '@mui/material/styles';
+     *
+     * const myTheme = extendTheme({ colorSchemes: { light: { palette: { primary: { main: '#e91e63' } } } } });
+     *
+     * <GiselleThemeProvider theme={myTheme}>
+     *   <App />
+     * </GiselleThemeProvider>
+     * ```
+     */
+    theme?: CssVarsTheme;
+    /**
+     * Initial color scheme applied before the user or system preference is read.
+     *
+     * @default 'system'
+     */
+    defaultMode?: 'light' | 'dark' | 'system';
+}
+
+/**
+ * Zero-config theme provider for `@alexrebula/giselle-mui`.
+ *
+ * Ships with the Giselle brand palette (Deep grove green + Mango gold) as
+ * the default — wrap your application and every MUI component gets the
+ * correct theme with no extra setup.
+ *
+ * ## Usage — zero config
+ * ```tsx
+ * import { GiselleThemeProvider } from '@alexrebula/giselle-mui';
+ *
+ * export default function RootLayout({ children }: { children: React.ReactNode }) {
+ *   return (
+ *     <html lang="en" suppressHydrationWarning>
+ *       <body>
+ *         <GiselleThemeProvider>{children}</GiselleThemeProvider>
+ *       </body>
+ *     </html>
+ *   );
+ * }
+ * ```
+ *
+ * ## Usage — partial overrides
+ * ```tsx
+ * <GiselleThemeProvider
+ *   themeOverrides={{ colorSchemes: { light: { palette: { primary: { main: '#1976d2' } } } } }}
+ * >
+ *   <App />
+ * </GiselleThemeProvider>
+ * ```
+ *
+ * ## Usage — fully custom theme
+ * ```tsx
+ * import { extendTheme } from '@mui/material/styles';
+ *
+ * const myTheme = extendTheme({ colorSchemes: { light: { palette: { primary: { main: '#e91e63' } } } } });
+ *
+ * <GiselleThemeProvider theme={myTheme}><App /></GiselleThemeProvider>
+ * ```
+ */
+declare function GiselleThemeProvider({ children, themeOverrides, theme, defaultMode, }: GiselleThemeProviderProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Minimum contract for all settings state shapes managed by `GiselleSettingsProvider`.
+ * Every consumer's settings type must include `version` for storage migration support.
+ */
+type BaseSettingsState = {
+    version: string;
+};
+/**
+ * Context value exposed by `GiselleSettingsProvider`.
+ * Access via `useGiselleSettings<TState>()`.
+ */
+type GiselleSettingsContextValue<TState> = {
+    /** Current persisted settings state. */
+    state: TState;
+    /**
+     * Partially update the settings state.
+     * The supplied object is shallow-merged with the current state.
+     *
+     * **Example:**
+     * ```ts
+     * setState({ mode: 'dark' }); // only overrides `mode`
+     * ```
+     */
+    setState: (partial: Partial<TState>) => void;
+    /**
+     * Update a single typed field.
+     * Key and value are correlated at the type level — no stringly-typed APIs.
+     *
+     * **Example:**
+     * ```ts
+     * setField('mode', 'dark');
+     * setField('fontSize', 16);
+     * ```
+     */
+    setField: <K extends keyof TState>(key: K, value: TState[K]) => void;
+    /** `true` when the current state differs from `defaultSettings` (deep comparison). */
+    canReset: boolean;
+    /** Reset state to `defaultSettings` and clear persisted storage. */
+    onReset: () => void;
+    /** Whether the settings panel drawer is open. */
+    openDrawer: boolean;
+    /** Close the settings panel drawer. */
+    onCloseDrawer: () => void;
+    /** Toggle the settings panel drawer open/closed. */
+    onToggleDrawer: () => void;
+};
+/**
+ * Custom storage adapter for `GiselleSettingsProvider`.
+ *
+ * Implement this interface to use a custom storage backend (e.g. IndexedDB,
+ * server-synced state, or a cookie library with custom serialisation options).
+ *
+ * **Example (IndexedDB via a simple wrapper):**
+ * ```ts
+ * const myAdapter: StorageAdapter<MySettings> = {
+ *   get: () => indexedDBStore.get('settings'),
+ *   set: (value) => indexedDBStore.set('settings', value),
+ *   clear: () => indexedDBStore.delete('settings'),
+ * };
+ *
+ * <GiselleSettingsProvider storage={myAdapter} defaultSettings={defaults}>
+ *   <App />
+ * </GiselleSettingsProvider>
+ * ```
+ */
+type StorageAdapter<TState> = {
+    /** Read the stored settings. Returns `null` when nothing is stored. */
+    get: () => TState | null;
+    /** Write the full settings object to storage. */
+    set: (value: TState) => void;
+    /** Remove the stored settings (called on `onReset`). */
+    clear: () => void;
+};
+/**
+ * Props for `GiselleSettingsProvider<TState>`.
+ */
+type GiselleSettingsProviderProps<TState extends BaseSettingsState> = {
+    /** Child components that receive settings via context. */
+    children?: ReactNode$1;
+    /**
+     * Default settings — used when nothing is persisted, and as the reset target.
+     *
+     * Must include a `version` field. Increment the version whenever the settings
+     * schema changes to trigger an automatic reset on clients that have stale storage.
+     *
+     * **Example:**
+     * ```ts
+     * const defaultSettings = { version: '2', mode: 'light', fontSize: 14 };
+     * ```
+     */
+    defaultSettings: TState;
+    /**
+     * Pre-resolved initial state from a server layer (e.g. Next.js RSC reading cookies).
+     *
+     * Pass this to avoid a hydration mismatch when the stored value differs from the
+     * server-rendered default. When omitted, the provider reads from storage in a
+     * mount-only `useEffect` (after the first render).
+     */
+    initialState?: TState;
+    /**
+     * Storage key used when `storage` is `'localStorage'` or `'cookie'`.
+     *
+     * @default 'giselle-settings'
+     */
+    storageKey?: string;
+    /**
+     * Storage backend.
+     *
+     * - `'localStorage'` — default; SSR-safe, reads/writes `window.localStorage`
+     * - `'cookie'` — reads/writes `document.cookie`; pair with `initialState` from an
+     *   RSC layer for SSR hydration without a flash
+     * - `StorageAdapter<TState>` — fully custom adapter for any storage backend
+     *
+     * @default 'localStorage'
+     */
+    storage?: 'localStorage' | 'cookie' | StorageAdapter<TState>;
+};
+/**
+ * Props for `GiselleThemeAndSettingsProvider` — a convenience wrapper that
+ * composes `GiselleThemeProvider` and `GiselleSettingsProvider` in one component
+ * and optionally bridges settings state to the MUI color scheme.
+ */
+type GiselleThemeAndSettingsProviderProps<TState extends BaseSettingsState> = GiselleSettingsProviderProps<TState> & {
+    /**
+     * Partial theme options deep-merged on top of the Giselle brand defaults.
+     * Ignored when `theme` is provided. Same as `GiselleThemeProviderProps.themeOverrides`.
+     */
+    themeOverrides?: CssVarsThemeOptions;
+    /**
+     * A fully custom theme created with `extendTheme()`. When provided, `themeOverrides`
+     * is ignored. Same as `GiselleThemeProviderProps.theme`.
+     */
+    theme?: CssVarsTheme;
+    /**
+     * Initial color scheme applied before settings are read.
+     * Same as `GiselleThemeProviderProps.defaultMode`.
+     *
+     * @default 'system'
+     */
+    defaultMode?: 'light' | 'dark' | 'system';
+    /**
+     * Map settings state to an MUI color scheme mode.
+     *
+     * When provided, the MUI color scheme is synced to the returned value
+     * whenever settings change. Use this to drive `light`/`dark`/`system` mode
+     * from your settings state.
+     *
+     * **Example:**
+     * ```ts
+     * getMode={(s) => s.mode}
+     * ```
+     */
+    getMode?: (state: TState) => 'light' | 'dark' | 'system' | undefined;
+};
+
+/**
+ * Generic settings state provider for MUI applications.
+ *
+ * Persists UI settings (color mode, font size, direction, etc.) to `localStorage`
+ * and exposes them via `useGiselleSettings<TState>()`. Includes built-in drawer
+ * open/close state for a settings panel.
+ *
+ * ## Zero-config usage
+ * ```tsx
+ * type MySettings = { version: string; mode: 'light' | 'dark' };
+ * const defaultSettings: MySettings = { version: '1', mode: 'light' };
+ *
+ * <GiselleSettingsProvider defaultSettings={defaultSettings}>
+ *   <App />
+ * </GiselleSettingsProvider>
+ * ```
+ *
+ * ## Reading settings
+ * ```ts
+ * const { state, setField, canReset, onReset } = useGiselleSettings<MySettings>();
+ * ```
+ *
+ * ## Storage backends
+ * ```tsx
+ * // Default — localStorage
+ * <GiselleSettingsProvider defaultSettings={defaults}><App /></GiselleSettingsProvider>
+ *
+ * // Cookie-based (pair with initialState from RSC for SSR hydration)
+ * <GiselleSettingsProvider storage="cookie" defaultSettings={defaults}><App /></GiselleSettingsProvider>
+ *
+ * // Custom adapter
+ * <GiselleSettingsProvider storage={myAdapter} defaultSettings={defaults}><App /></GiselleSettingsProvider>
+ * ```
+ *
+ * ## Schema migration
+ * Increment `version` in `defaultSettings` whenever the settings shape changes.
+ * The provider resets all stored state automatically when a version mismatch is detected.
+ */
+declare function GiselleSettingsProvider<TState extends BaseSettingsState>({ children, defaultSettings, initialState, storageKey, storage, }: GiselleSettingsProviderProps<TState>): react_jsx_runtime.JSX.Element;
+
+/**
+ * Convenience wrapper that composes `GiselleThemeProvider` and
+ * `GiselleSettingsProvider` in a single component, with an optional bridge
+ * that syncs settings state to the MUI color scheme.
+ *
+ * ## Zero-config usage
+ * ```tsx
+ * const defaultSettings = { version: '1', mode: 'light' as const };
+ *
+ * <GiselleThemeAndSettingsProvider defaultSettings={defaultSettings}>
+ *   <App />
+ * </GiselleThemeAndSettingsProvider>
+ * ```
+ *
+ * ## With color scheme sync
+ * ```tsx
+ * <GiselleThemeAndSettingsProvider
+ *   defaultSettings={defaultSettings}
+ *   getMode={(s) => s.mode}
+ * >
+ *   <App />
+ * </GiselleThemeAndSettingsProvider>
+ * ```
+ *
+ * ## With cookie storage + SSR hydration
+ *
+ * Read the stored settings server-side (e.g. via Next.js `cookies()`), parse them,
+ * and pass as `initialState` to avoid a flash of default settings on first render.
+ * ```tsx
+ * // In a Next.js RSC (app/layout.tsx) — read + parse the stored cookie
+ * const raw = (await cookies()).get('giselle-settings')?.value ?? null;
+ * const initialState = raw ? (JSON.parse(raw) as typeof defaultSettings) : undefined;
+ *
+ * <GiselleThemeAndSettingsProvider
+ *   defaultSettings={defaultSettings}
+ *   initialState={initialState}
+ *   storage="cookie"
+ *   getMode={(s) => s.mode}
+ * >
+ *   <App />
+ * </GiselleThemeAndSettingsProvider>
+ * ```
+ */
+declare function GiselleThemeAndSettingsProvider<TState extends BaseSettingsState>({ children, defaultSettings, initialState, storageKey, storage, themeOverrides, theme, defaultMode, getMode, }: GiselleThemeAndSettingsProviderProps<TState>): react_jsx_runtime.JSX.Element;
+
+/**
+ * Access the Giselle settings context.
+ *
+ * Must be called within a `<GiselleSettingsProvider>` tree.
+ * Pass the same `TState` type that was used on the provider for full type safety.
+ *
+ * **Example:**
+ * ```ts
+ * const { state, setField, canReset, onReset } = useGiselleSettings<MySettings>();
+ * ```
+ *
+ * @throws {Error} When called outside a `GiselleSettingsProvider`.
+ */
+declare function useGiselleSettings<TState extends BaseSettingsState>(): GiselleSettingsContextValue<TState>;
+
 /**
  * Props for {@link GiselleIcon}.
  *
- * Not extending `IconProps` directly — `@iconify/react` types `display` as
- * `string | number`, which conflicts with MUI Box's `ResponsiveStyleValue<Display>`
- * and causes a TypeScript overload resolution failure when used with `Box component`.
- * Only the safe subset of `IconProps` is exposed here.
+ * Extends `Omit<React.HTMLAttributes<HTMLSpanElement>, 'style' | 'className' | 'children'>`
+ * to support `id`, `aria-*`, `data-*`, and other standard HTML attributes forwarded
+ * to the outer `Box component="span"` wrapper.
+ *
+ * Not extending `BoxProps` or `IconProps` directly — `@iconify/react` types `display` as
+ * `string | number`, which conflicts with MUI Box's `ResponsiveStyleValue<Display>`.
+ * `className` and `style` are intentionally kept as explicit props because they are
+ * forwarded to the inner `Icon` SVG element, not the outer wrapper.
  */
-interface GiselleIconProps {
+interface GiselleIconProps extends Omit<React__default.HTMLAttributes<HTMLSpanElement>, 'style' | 'className' | 'children'> {
     /**
      * Iconify icon identifier in the format `"prefix:name"`,
      * e.g. `"solar:rocket-bold-duotone"` or `"logos:react"`.
@@ -325,8 +719,10 @@ interface GiselleIconProps {
  *   icon={<GiselleIcon icon="solar:clock-circle-bold-duotone" width={36} />}
  *   decoration={<MetricCardDecoration color="primary" />}
  * />
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
-declare function GiselleIcon({ icon, width, height, sx, className, style, flip, rotate, }: GiselleIconProps): react_jsx_runtime.JSX.Element;
+declare function GiselleIcon({ icon, width, height, sx, className, style, flip, rotate, ...other }: GiselleIconProps): react_jsx_runtime.JSX.Element;
 
 /**
  * Props for the {@link Accordion} component.
@@ -548,7 +944,7 @@ type AccordionProps = Omit<AccordionProps$1, 'children' | 'title'> & {
  * </Accordion>
  * ```
  *
- * **Quality status (8 May 2026):** DoD 20/20 · Best practices 13/13 · Coverage 100% · Cleanup complete
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13 · Coverage 100% · Cleanup complete
  */
 declare function Accordion({ title, children, checklist, done, indeterminate, onDoneButtonClick, leadingIcon, leadingAction, trailingContent, expandIcon, checkIcon, checkDoneIcon, checkHoverIcon, sx, ...other }: AccordionProps): react_jsx_runtime.JSX.Element;
 
@@ -561,23 +957,118 @@ declare function Accordion({ title, children, checklist, done, indeterminate, on
  * regression tests can enforce it even if the checkbox padding is ever changed.
  */
 declare const ACCORDION_DONE_MIN_TOUCH_TARGET = 24;
+
 /**
- * Width and height (px) of the default check SVG icons in icon-button mode
- * (`checkIcon`, `checkDoneIcon`, `checkHoverIcon`).
+ * Props for the {@link ToggleIconButton} component.
  *
- * Set to 20 px — the minimum for interactive icons per WCAG 1.4.11.
+ * Extends MUI `IconButtonProps` — `size`, `disabled`, `color`, `sx`, `aria-label`,
+ * and all other MUI `IconButton` props are forwarded to the root element unchanged.
+ * `children` and `onClick` are omitted because `ToggleIconButton` owns them internally.
+ * `aria-pressed` is omitted because it is always set from the `pressed` prop.
+ *
+ * **WCAG note:** Always provide a descriptive `aria-label` that communicates the
+ * current state and what will happen on activation, e.g.:
+ * - `aria-label={pressed ? 'Remove from favourites' : 'Add to favourites'}`
+ * - `aria-label={pressed ? 'Mark as not done' : 'Mark as done'}`
+ */
+type ToggleIconButtonProps = Omit<IconButtonProps, 'children' | 'onClick' | 'aria-pressed'> & {
+    /**
+     * Whether the button is currently in the pressed (active) state.
+     * Controls which icon is displayed at idle and sets `aria-pressed`.
+     */
+    pressed: boolean;
+    /**
+     * Icon displayed when the button is idle and not pressed.
+     * Required — this is the primary visual indicator of the button's purpose.
+     */
+    idleIcon: ReactNode$1;
+    /**
+     * Icon displayed when `pressed` is `true` and the button is not hovered or focused.
+     * Default: built-in filled green check circle SVG.
+     */
+    pressedIcon?: ReactNode$1;
+    /**
+     * Icon displayed on hover or keyboard focus, regardless of `pressed` state.
+     * Signals "this button is interactive — click/press to toggle."
+     * Default: built-in outlined green check circle SVG.
+     */
+    hoverIcon?: ReactNode$1;
+    /**
+     * Called when the button is activated (click, Space, Enter).
+     * Receives the **next** pressed state — the value the button will transition to.
+     *
+     * Named `onPressedChange` to avoid conflict with React's native HTML `onToggle`
+     * event (`ToggleEventHandler`) which has an incompatible signature.
+     */
+    onPressedChange?: (nextPressed: boolean) => void;
+};
+
+/**
+ * Icon button with three CSS-driven icon states and `aria-pressed` semantics.
+ *
+ * A generic binary toggle that makes no assumptions about what "pressed" means —
+ * the consumer supplies the icons and the label. `Accordion` uses it for its
+ * done-toggle; a calendar might use it for a favourite-day marker; a list item
+ * might use it for a bookmark.
+ *
+ * ## Icon states
+ *
+ * | Interaction state            | Icon shown       |
+ * | ---------------------------- | ---------------- |
+ * | Idle + not pressed           | `idleIcon`       |
+ * | Idle + pressed               | `pressedIcon`    |
+ * | Hover **or** keyboard focus  | `hoverIcon`      |
+ *
+ * Switching is **CSS-only** — no JS hover state — which eliminates the
+ * "stuck hover" bug that occurs on rapid pointer movement.
+ *
+ * ## Keyboard
+ *
+ * Tab to focus (shows `hoverIcon`), Space / Enter to toggle.
+ * MUI `IconButton` natively handles Space / Enter as click events.
+ *
+ * ## WCAG 2.2 AA
+ *
+ * - `aria-pressed` communicates the binary pressed / not-pressed state.
+ * - Always pass a descriptive `aria-label` that reflects the **current** state
+ *   and what will happen on the next activation, e.g.:
+ *   `aria-label={pressed ? 'Remove from favourites' : 'Add to favourites'}`
+ * - `size="small"` on the underlying `IconButton` produces a ≥ 30 px touch
+ *   target (exceeds the 24 px WCAG 2.5.8 minimum).
+ *
+ * ## Usage
+ *
+ * ```tsx
+ * <ToggleIconButton
+ *   pressed={isFavourite}
+ *   idleIcon={<GiselleIcon icon="solar:star-outline" width={20} />}
+ *   pressedIcon={<GiselleIcon icon="solar:star-bold" width={20} />}
+ *   hoverIcon={<GiselleIcon icon="solar:star-bold" width={20} />}
+ *   onPressedChange={setIsFavourite}
+ *   aria-label={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+ * />
+ * ```
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
+ */
+declare function ToggleIconButton({ pressed, idleIcon, pressedIcon, hoverIcon, onPressedChange, sx, ...other }: ToggleIconButtonProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Width and height (px) of the default built-in SVG icons inside `ToggleIconButton`.
+ *
+ * Set to 20 px — the WCAG 1.4.11 minimum for interactive icons.
  * Never reduce below 20.
  */
-declare const ACCORDION_CHECK_ICON_SIZE = 20;
+declare const TOGGLE_ICON_SIZE = 20;
 /**
- * Minimum touch target size (px) for the icon-button done toggle.
+ * Minimum touch target size (px) for `ToggleIconButton`.
  *
- * WCAG 2.5.8 requires interactive targets to be ≥ 24 × 24 px.
- * MUI `IconButton` in `size="small"` mode renders a ≥ 30 px touch target
- * by default, which exceeds this minimum. This constant documents the floor
- * for regression tests.
+ * WCAG 2.5.8 (Level AA) requires interactive targets to be at least 24 × 24 px.
+ * MUI `IconButton` in `size="small"` mode renders a ≥ 30 px touch target by
+ * default, which exceeds this minimum. This constant documents the floor so
+ * regression tests can enforce it if the button padding is ever changed.
  */
-declare const ACCORDION_ICON_BUTTON_MIN_SIZE = 28;
+declare const TOGGLE_MIN_TOUCH_TARGET = 28;
 
 type MetricCardColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
 interface MetricCardProps extends PaperProps {
@@ -690,6 +1181,8 @@ interface SelectableCardProps extends ButtonBaseProps {
  * <SelectableCard selected={isSelected} sx={{ p: 3, borderRadius: 2 }} onClick={...}>
  *   ...children...
  * </SelectableCard>
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function SelectableCard({ selected, disabled, children, sx, ...other }: SelectableCardProps): react_jsx_runtime.JSX.Element;
 
@@ -745,6 +1238,8 @@ interface QuoteCardProps extends PaperProps {
  *   source="Platform Team"
  *   elevation={0}
  * />
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function QuoteCard({ quote, author, source, color, elevation, sx, ...other }: QuoteCardProps): react_jsx_runtime.JSX.Element;
 
@@ -837,7 +1332,6 @@ declare const STAT_CARD_SPARKLINE_OPTIONS: ApexOptions;
  * StatCard — KPI summary card with icon, trend indicator, and optional chart slot.
  *
  * The gradient background is built from the palette's `lightChannel` via `channelAlpha`.
- * No Minimals utilities (`varAlpha`, `varFade`, etc.) are used.
  *
  * The `chart` slot accepts any `ReactNode` — no chart-library dependency inside this
  * component. Use `STAT_CARD_SPARKLINE_OPTIONS` as the base options for the canonical
@@ -863,8 +1357,74 @@ declare const STAT_CARD_SPARKLINE_OPTIONS: ApexOptions;
  *   }
  * />
  * ```
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function StatCard({ label, value, trend, trendLabel, icon, color, chart, sx, ...other }: StatCardProps): react_jsx_runtime.JSX.Element;
+
+interface StatCardRowProps extends Omit<GridProps, 'children' | 'container'> {
+    /** Items to render as `StatCard` tiles in the responsive grid row. */
+    items: StatCardItem[];
+    /**
+     * Optional factory to render the `chart` slot for each item.
+     *
+     * Use this to wire sparklines from `@alexrebula/giselle-mui/charts` in the consuming app.
+     * When omitted, cards render without a chart — the main bundle stays chart-free.
+     *
+     * @example
+     * ```tsx
+     * renderChart={(item) =>
+     *   item.sparkline ? (
+     *     <ReactApexChart
+     *       type="line"
+     *       series={[{ data: item.sparkline }]}
+     *       options={{ ...STAT_CARD_SPARKLINE_OPTIONS, colors: [theme.palette[item.color].dark] }}
+     *       width={84}
+     *       height={56}
+     *     />
+     *   ) : null
+     * }
+     * ```
+     */
+    renderChart?: (item: StatCardItem) => ReactNode$1;
+}
+
+/**
+ * `StatCardRow` — responsive grid of `StatCard` tiles.
+ *
+ * Accepts a `StatCardItem[]` and maps each entry to a `StatCard`, laid out in a
+ * responsive grid row: full-width on xs, two columns on sm, four columns on md+.
+ *
+ * The `renderChart` prop is intentionally optional so the component stays in the
+ * **main bundle** without pulling in ApexCharts. Pass a factory function when you
+ * want sparklines — wire `ReactApexChart` inside the factory, imported from the
+ * `/charts` subpath.
+ *
+ * @example
+ * ```tsx
+ * // Minimal — no sparklines
+ * <StatCardRow items={stats} />
+ *
+ * // With sparklines (consuming app imports from /charts subpath)
+ * <StatCardRow
+ *   items={stats}
+ *   renderChart={(item) =>
+ *     item.sparkline ? (
+ *       <ReactApexChart
+ *         type="line"
+ *         series={[{ data: item.sparkline }]}
+ *         options={{ ...STAT_CARD_SPARKLINE_OPTIONS, colors: [theme.palette[item.color].dark] }}
+ *         width={84}
+ *         height={56}
+ *       />
+ *     ) : null
+ *   }
+ * />
+ * ```
+ *
+ * **Quality status (13 May 2026):** DoD — in progress
+ */
+declare function StatCardRow({ items, renderChart, sx, ...other }: StatCardRowProps): react_jsx_runtime.JSX.Element;
 
 type ReactNode = React.ReactNode;
 
@@ -883,18 +1443,12 @@ interface TaskDetails {
  * Base unit for any trackable work item in the timeline.
  *
  * `TimelinePhase`, `TimelineMilestone`, and every nested sub-task all share this shape.
- * Having a common base makes parent-child done-state propagation computable at any depth:
+ * The shared base keeps phase/milestone/task shapes consistent for done-state propagation.
  *
  * - All `children` done → parent can be auto-marked done.
  * - Any `children` un-done → parent reverts to not-done.
- * - Nesting is unbounded: a `Task` child can itself have `children`.
- *
- * ```
- * TimelinePhase (extends Task)
- *   └─ children / milestones: Task[]
- *        └─ children: Task[]
- *             └─ children: Task[]   ← infinite depth
- * ```
+ * - Current timeline UI/callback plumbing is position-based and supports one visible
+ *   nested `children` level for interactive toggling.
  */
 type Task = {
     /** Stable identifier for this work item. */
@@ -916,10 +1470,13 @@ type Task = {
     /** Optional rich details rendered in a modal or drawer. */
     details?: TaskDetails;
     /**
-     * Nested sub-tasks. Can be nested to any depth.
+     * Nested sub-tasks.
+     *
+     * Data may include deeper nesting, but current timeline rendering/toggle callbacks
+     * operate on one visible nested level.
      *
      * Replaces the legacy flat `details: string[]` field. Migrate data files by converting
-     * each string to `{ title: string }`. Add `done?` and further `children?` as needed.
+     * each string to `{ title: string }`.
      */
     children?: Task[];
 };
@@ -1066,7 +1623,7 @@ type TimelinePhase = Task & {
      */
     platformsLabel?: string;
     /**
-     * 'scenario' — coloured left border + badge label (used in case-001 for departure scenarios).
+     * 'scenario' — coloured left border + badge label (used for scheduling scenarios with multiple options).
      * 'life-event' — coloured left border + tinted background (used in career timeline).
      * 'marker' — spine-only: dot + floating label, no card. For single point-in-time events
      *             that don't warrant a full phase card (e.g. a certification date, a visa grant).
@@ -1360,8 +1917,8 @@ type PhaseCardProps = Omit<BoxProps, 'children'> & {
     expandableIcon?: ReactNode$1;
     /**
      * Which column the card sits in — controls where the corner alert badge is anchored.
-     * - `'right'` (default): badge floats on the right top corner (between card and spine).
-     * - `'left'`: badge floats on the left top corner (mirrored, between spine and card edge).
+     * - `'right'` (default): badge floats on the right top corner (outer edge, away from spine).
+     * - `'left'`: badge floats on the left top corner (mirrored outer edge, away from spine).
      */
     columnSide?: 'left' | 'right';
     /**
@@ -1381,11 +1938,11 @@ type PhaseCardProps = Omit<BoxProps, 'children'> & {
      */
     allPhases?: TimelinePhase[];
     /**
-     * Done state for each task (sub-item) in this phase, indexed by position.
-     * Provided by `TimelineTwoColumn` when task-level done state is active.
+     * Done state for each task (sub-item) in this phase, keyed by `String(task.key)`.
+     * `idx-${n}` fallback keys are accepted for compatibility with legacy index-based wiring.
      * Falls back to `task.done` from the data when absent.
      */
-    taskDoneStates?: boolean[];
+    taskDoneStates?: Record<string, boolean>;
     /**
      * Called when the user clicks a task toggle icon.
      * When provided, task rows are interactive; when absent they are decorative.
@@ -1404,6 +1961,63 @@ type PhaseCardProps = Omit<BoxProps, 'children'> & {
  * Status badge (overdue / active / scenario) is resolved automatically from props.
  */
 declare function PhaseCard({ phase, done, overdue, dateConflict, dateConflictLabel, isExpanded, onRequestExpand, suppressElevation, expandableIcon, isViewed, onMarkViewed, columnSide, onPhasesChange, allPhases, taskDoneStates, onToggleTask, sx, ...other }: PhaseCardProps): react_jsx_runtime.JSX.Element;
+
+type MilestoneBadgeProps = Omit<PaperProps, 'children'> & {
+    /** The milestone data object from the parent phase's `milestones` array. */
+    milestone: TimelineMilestone;
+    /** Dims and desaturates the card. Mirrors the checklist done state from the parent timeline. */
+    done?: boolean;
+    /** Whether this card's details section is currently expanded. Controlled by the parent accordion. */
+    isExpanded: boolean;
+    /** Called when the user clicks or keys Enter/Space to toggle this card open or closed. */
+    onRequestExpand: () => void;
+    /** When true, suppresses box-shadow so the card appears flat (used when another card is expanded). */
+    suppressElevation?: boolean;
+    /**
+     * Icon rendered in the expandable-details count badge. Defaults to the bundled inline SVG subtask icon.
+     * Pass `null` to suppress the icon and show only the count number.
+     */
+    expandableIcon?: ReactNode$1;
+    /**
+     * Stable unique id prefix used to construct the `aria-controls` / `id` pair for the
+     * expandable details region. Should be unique across all milestones on the page
+     * (e.g. `"${phaseKey}-${milestoneIndex}"`). Falls back to a sanitised title slug
+     * when omitted, which can collide if two milestones share the same title.
+     */
+    stableId?: string;
+    /**
+     * When true, the viewed eye indicator shows as filled (success colour).
+     * Only renders when `onMarkViewed` is also provided.
+     */
+    isViewed?: boolean;
+    /** Called when the user clicks the viewed eye button. Parent handles persistence. */
+    onMarkViewed?: () => void;
+    /**
+     * Which column this milestone sits in. Left-column milestones right-align their
+     * collapsed title and inline elements so text sits flush against the centre spine.
+     * Alignment resets to left when the card is expanded.
+     * @default 'right'
+     */
+    columnSide?: 'left' | 'right';
+    /**
+     * Done state for each task (sub-item) in this milestone, keyed by `String(task.key)`.
+     * `idx-${n}` fallback keys are accepted for compatibility with legacy index-based wiring.
+     * Falls back to `task.done` from the data when absent.
+     */
+    taskDoneStates?: Record<string, boolean>;
+    /**
+     * Called when the user clicks a task toggle icon.
+     * When provided, task rows are interactive; when absent they are decorative.
+     */
+    onToggleTask?: (taskIndex: number, done: boolean) => void;
+};
+
+/**
+ * Milestone card — spine-adjacent badge that expands/collapses on click.
+ * Expansion is controlled externally (accordion: at most one open per phase).
+ * The parent wrapper in TimelineTwoColumn owns z-index and blur animations.
+ */
+declare function MilestoneBadge({ milestone: m, done, isExpanded, onRequestExpand, suppressElevation, expandableIcon, stableId, isViewed, onMarkViewed, columnSide, taskDoneStates, onToggleTask, sx, ...other }: MilestoneBadgeProps): react_jsx_runtime.JSX.Element;
 
 type TimelineDotComponentProps = Omit<BoxProps, 'color' | 'onClick'> & {
     /** Icon to render inside the dot. Accepts a `width` prop for sizing. */
@@ -1477,6 +2091,8 @@ declare function TimelineDot({ icon, color, size, active, done, animationKey, do
  *
  * For hero navigation use, pass `selectedPhaseKey` + `onPhaseSelect` to control
  * which phase dot appears active from the outside.
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function TimelineTwoColumn({ phases, checklist, onTogglePhaseDone, onToggleMilestoneDone, onToggleTaskDone, selectedPhaseKey, onPhaseSelect, expandableIcon, viewedKeys, onMarkViewed, onPhasesChange, sortOrder, milestoneSlotHeight, phaseCardGap, yearLabelMarginBottom, sx, ...other }: TimelineTwoColumnProps): react_jsx_runtime.JSX.Element;
 
@@ -1553,8 +2169,35 @@ interface TaskDetailsRendererProps extends BoxProps {
     emptyState?: ReactNode$1;
 }
 
+/**
+ * Collapsible accordion view of timeline phases and milestones,
+ * optimised for mobile and narrow-viewport contexts.
+ *
+ * One phase = one accordion row. Expanding a row reveals its milestones in
+ * the order controlled by `sortOrder`. In checklist mode each phase and
+ * milestone row shows a completion toggle.
+ *
+ * Shares the same `TimelinePhase` data model as `TimelineTwoColumn` — the
+ * same dataset can render both views from a single source.
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
+ */
 declare function TimelineCompact({ phases, checklist, sortOrder, viewedKeys: _viewedKeys, onMarkViewed, onTogglePhaseDone, onToggleMilestoneDone, onToggleTaskDone, sx, ...other }: TimelineCompactProps): react_jsx_runtime.JSX.Element;
 
+/**
+ * Renders the detailed content for a single timeline task or milestone.
+ *
+ * Handles all content variants in priority order:
+ * - Inline `description` string → rendered as `body2` text.
+ * - `details.summary` → ReactNode summary paragraph.
+ * - `details.content` → ReactNode free-form content block.
+ * - Nested `tasks` array → rendered via `TaskList` (optionally in checklist mode).
+ *
+ * Falls back to `emptyState` text when no content is present.
+ *
+ * **Quality status (13 May 2026):** DoD 9/9 · Best practices 13/13
+ * @internal — used by `TaskDetailsModal` and `PhaseAccordionRow`.
+ */
 declare function TaskDetailsRenderer({ task, checklist, taskDoneState, onTaskToggle, emptyState, sx, ...other }: TaskDetailsRendererProps): react_jsx_runtime.JSX.Element;
 
 /**
@@ -1632,6 +2275,8 @@ interface TaskListProps extends BoxProps {
  *
  * Use `indent="milestone"` when the list sits inside a milestone card to
  * add an extra level of left padding relative to the phase-level baseline.
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function TaskList({ tasks, checklist, taskDoneState, onTaskToggle, indent, sx, ...other }: TaskListProps): react_jsx_runtime.JSX.Element;
 
@@ -1888,6 +2533,8 @@ type TwoColumnShowcaseRowProps = Omit<GridProps, 'direction' | 'container' | 'co
  * // Controls only — full width column layout
  * <TwoColumnShowcaseRow controls={<DashboardPreview />} orientation="column" />
  * ```
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function TwoColumnShowcaseRow({ text, controls, orientation, controlsAlign, textSx, controlsSx, sx, ...other }: TwoColumnShowcaseRowProps): react_jsx_runtime.JSX.Element;
 
@@ -1930,6 +2577,8 @@ type SectionCaptionProps = {
 /**
  * `SectionCaption` renders the overline label above the section heading.
  * Exported so consumers can use it standalone when they need just the overline.
+ *
+ * **Quality status (13 May 2026):** DoD 9/9 · Best practices 13/13
  */
 declare function SectionCaption({ title, sx, ...other }: SectionCaptionProps): react_jsx_runtime.JSX.Element;
 
@@ -1953,6 +2602,8 @@ declare function SectionCaption({ title, sx, ...other }: SectionCaptionProps): r
  * The `txtGradient` word is appended after `title` and rendered with a
  * `text.primary → text.primary @20%` left-to-right gradient. In dark mode
  * `text.primary` resolves to near-white, giving a natural fade-out.
+ *
+ * **Quality status (13 May 2026):** DoD 20/20 · Best practices 13/13
  */
 declare function SectionTitle({ sx, title, caption, slotProps, txtGradient, description, ...other }: SectionTitleProps): react_jsx_runtime.JSX.Element;
 
@@ -2022,8 +2673,70 @@ interface SectionContainerProps extends Omit<ContainerProps, 'maxWidth'> {
  *   ...
  * </SectionContainer>
  * ```
+ *
+ * **Quality status (14 May 2026):** DoD 21/21 · Best practices 13/13
  */
 declare function SectionContainer({ children, maxWidth, py, sx, ...other }: SectionContainerProps): react_jsx_runtime.JSX.Element;
+
+/**
+ * Palette color key for the `HeroSection` background tint.
+ */
+type HeroColorKey = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
+interface HeroSectionProps extends Omit<BoxProps, 'color'> {
+    /**
+     * Heading slot. Render a `<Typography variant="h1">` (or any heading element) here.
+     * The component does not wrap this in any element — whatever you pass is rendered directly.
+     */
+    headline: ReactNode$1;
+    /**
+     * Subtitle slot rendered below the headline. Render a `<Typography variant="h5">` or
+     * similar here. Omit to render a headline-only hero.
+     */
+    subtitle?: ReactNode$1;
+    /**
+     * Optional CTA slot. Render one or more `Button` elements here.
+     * They are laid out in a centred, wrapping flex row.
+     */
+    actions?: ReactNode$1;
+    /**
+     * MUI palette colour key used to derive the background tint.
+     * The tint is `channelAlpha(mainChannel, 0.08)` — subtle, works in light and dark mode.
+     * @default 'primary'
+     */
+    color?: HeroColorKey;
+    /** MUI `sx` override on the root `Box`. */
+    sx?: SxProps<Theme>;
+}
+
+/**
+ * `HeroSection` — full-width, palette-tinted hero with headline, subtitle, and CTA slot.
+ *
+ * Background is tinted using `channelAlpha(mainChannel, 0.08)` — works in light and
+ * dark mode with zero hardcoded hex values. Content is constrained to `maxWidth="lg"`
+ * and centred.
+ *
+ * **Usage:**
+ * ```tsx
+ * <HeroSection
+ *   headline={<Typography variant="h1">Build something great</Typography>}
+ *   subtitle={<Typography variant="h5" color="text.secondary">A clean, accessible component library for MUI v7.</Typography>}
+ *   actions={
+ *     <>
+ *       <Button variant="contained">Get started</Button>
+ *       <Button variant="outlined">View docs</Button>
+ *     </>
+ *   }
+ * />
+ * ```
+ *
+ * **Tint colour:**
+ * ```tsx
+ * <HeroSection headline="Success hero" color="success" />
+ * ```
+ *
+ * **Quality status (14 May 2026):** DoD 21/21 · Best practices 13/13
+ */
+declare function HeroSection({ headline, subtitle, actions, color, sx, ...other }: HeroSectionProps): react_jsx_runtime.JSX.Element;
 
 /**
  * Maps a maturity/readiness percentage to a MUI palette key.
@@ -2097,194 +2810,87 @@ declare function resolveMaturityLabel(percent: number): string;
  */
 declare function assignMilestoneSidesByDone(phases: TimelinePhase[]): TimelinePhase[];
 
-type RadialProgressItem = {
-    /** Series segment label displayed in the chart and legend. */
-    label: string;
-    /** Percentage value (0–100) for this segment. */
-    value: number;
-    /** MUI palette key used to colour this segment and its legend dot. */
-    color: StatCardColor;
-};
-type RadialProgressCardProps = Omit<CardProps, 'title' | 'children'> & {
+/** Palette color keys accepted by AnimatedGradientText. */
+type PaletteColorKey = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
+interface AnimatedGradientTextProps extends Omit<BoxProps, 'color'> {
     /**
-     * Card title shown in the `CardHeader`.
-     * Omit to suppress the header entirely.
+     * Palette color key for the gradient start and loop-back color.
+     * @default 'primary'
      */
-    title?: string;
+    color1?: PaletteColorKey;
     /**
-     * Card subheader shown below `title`.
-     * Ignored when `title` is not provided.
+     * Palette color key for the gradient midpoint color.
+     * @default 'secondary'
      */
-    subheader?: string;
+    color2?: PaletteColorKey;
     /**
-     * Number shown in the radial chart centre — typically an aggregate percentage.
-     *
-     * **Example:** `35` renders as `"35"` with the `totalLabel` below it.
+     * Animation cycle duration in seconds. Must be positive.
+     * @default 3
      */
-    total: number;
-    /**
-     * Short label shown below `total` in the chart centre.
-     *
-     * @default '%'
-     */
-    totalLabel?: string;
-    /**
-     * Chart height in pixels.
-     *
-     * @default 280
-     */
-    chartHeight?: number;
-    /**
-     * Array of series items — one radial segment per item.
-     * Segments are rendered from outermost (first) to innermost (last).
-     */
-    series: RadialProgressItem[];
-    sx?: SxProps<Theme>;
-};
+    duration?: number;
+}
 
 /**
- * `RadialProgressCard`
+ * Displays children as continuously animated gradient text.
  *
- * A `Card` containing a multi-series radial-bar chart and a legend row.
- * Inspired by the EcommerceSaleByGender pattern — independently implemented
- * without any Minimals utilities.
+ * The gradient cycles between `color1` and `color2` using CSS
+ * `backgroundPosition` animation — no JavaScript animation loop.
+ * Uses `var(--mui-palette-*)` CSS custom properties, so it adapts to
+ * light/dark mode automatically.
  *
- * **Usage:**
+ * Renders as `<span>` by default; override with the `component` prop.
+ *
+ * @example
  * ```tsx
- * <RadialProgressCard
- *   title="Store Readiness"
- *   total={35}
- *   totalLabel="% Ready"
- *   series={[
- *     { label: 'Quality',    value: 90, color: 'success'  },
- *     { label: 'Components', value: 50, color: 'primary'  },
- *     { label: 'Theme',      value: 40, color: 'warning'  },
- *     { label: 'Docs',       value: 20, color: 'error'    },
+ * <Typography variant="h2">
+ *   <AnimatedGradientText color1="primary" color2="secondary">
+ *     Open Source
+ *   </AnimatedGradientText>
+ * </Typography>
+ * ```
+ */
+declare function AnimatedGradientText({ children, color1, color2, duration, component, sx, ...other }: AnimatedGradientTextProps): react_jsx_runtime.JSX.Element;
+
+/** One icon + label pair in a TechIconStrip. */
+interface TechIconItem {
+    /** Icon node — any `ReactNode` (GiselleIcon, SVG, `<img>`, etc.). */
+    icon: ReactNode$1;
+    /**
+     * Display label shown below the icon.
+     * Must be unique within the `items` array — used as the React list key.
+     */
+    label: string;
+}
+interface TechIconStripProps extends Omit<BoxProps, 'children'> {
+    /** Array of icon + label pairs to display. */
+    items: TechIconItem[];
+    /** Optional section title rendered above the strip as `overline` text. */
+    title?: string;
+    /**
+     * When `true`, items wrap around the horizontal centre rather than
+     * left-aligning to the container edge.
+     * @default false
+     */
+    centeredWrap?: boolean;
+}
+
+/**
+ * Horizontal strip of icon + label pairs.
+ *
+ * Use for "Technologies used", "Built with", or any icon-labelled collection.
+ * The strip wraps automatically when the container is too narrow.
+ *
+ * @example
+ * ```tsx
+ * <TechIconStrip
+ *   title="Technologies"
+ *   items={[
+ *     { icon: <GiselleIcon icon="solar:code-bold" width={32} />, label: 'TypeScript' },
+ *     { icon: <GiselleIcon icon="solar:database-bold" width={32} />, label: 'PostgreSQL' },
  *   ]}
  * />
  * ```
  */
-declare function RadialProgressCard({ title, subheader, total, totalLabel, chartHeight, series, sx, ...other }: RadialProgressCardProps): react_jsx_runtime.JSX.Element;
+declare function TechIconStrip({ items, title, centeredWrap, sx, ...other }: TechIconStripProps): react_jsx_runtime.JSX.Element;
 
-/**
- * PersonProfile — data model for a person in a cross-border family dispute.
- *
- * Designed for use in the Parents Across Borders (PAB) module and any
- * case-documentation page that needs to display the parties involved in a
- * family law / international custody situation.
- *
- * Contains no personal data — that lives in the consumer's data layer.
- * This file defines only the shape.
- */
-/**
- * The role of this person in the case.
- *
- * - `'applicant'`     — the person seeking the court order / requesting the visit
- * - `'respondent'`    — the person responding to the application
- * - `'primary-carer'` — holds day-to-day physical custody
- * - `'non-resident'`  — lives in a different country from the child
- */
-type PersonRole = 'applicant' | 'respondent' | 'primary-carer' | 'non-resident';
-/**
- * A documented behavioral pattern observed in a parent's conduct.
- * Used to build a profile for strategic communication planning.
- */
-type BehavioralPattern = {
-    /** Short machine-readable identifier, e.g. `'incremental-obstruction'` */
-    id: string;
-    /** Display label, e.g. `'Incremental obstruction'` */
-    label: string;
-    /** One-sentence description of the pattern */
-    description: string;
-    /** Number of documented instances (for evidence weight) */
-    evidenceCount?: number;
-};
-/**
- * A prior legal event relevant to the case (court hearing, ruling, settlement).
- */
-type LegalRecord = {
-    /** Date of the ruling / hearing, e.g. `'Feb 2026'` */
-    date: string;
-    /** What the case was about */
-    description: string;
-    /** What the judge decided */
-    outcome: string;
-    /** Approximate legal cost to the applicant, e.g. `'~€2,000'` */
-    costToApplicant?: string;
-};
-/**
- * A note about how to communicate with this parent — what works, what to avoid.
- */
-type CommunicationNote = {
-    /** Short label, e.g. `'Always in writing'` */
-    label: string;
-    /** Explanation */
-    detail: string;
-};
-/**
- * Full profile of one person in a cross-border family dispute.
- *
- * Used by the Parents Across Borders (PAB) module to display the parties
- * involved, document behavioral patterns, and guide communication strategy.
- *
- * @example
- * ```ts
- * const respondentProfile: PersonProfile = {
- *   id: 'respondent',
- *   displayName: '[Mother]',
- *   role: 'respondent',
- *   location: 'Country A',
- *   language: 'Slovenian',
- *   custodyStatus: 'sole physical custody',
- *   behavioralPatterns: [
- *     {
- *       id: 'asymmetric-rule-enforcement',
- *       label: 'Asymmetric rule enforcement',
- *       description:
- *         'Enforces rules on the other parent that she does not follow herself.',
- *       evidenceCount: 3,
- *     },
- *   ],
- * };
- * ```
- */
-type PersonProfile = {
-    /**
-     * Stable machine-readable identifier, e.g. `'applicant'` or `'respondent'`.
-     * Used as a key — never displayed directly.
-     */
-    id: string;
-    /**
-     * Display name — may be anonymised for public use, e.g. `'[Father]'`,
-     * or a real first name for internal case documentation.
-     */
-    displayName: string;
-    /** The role this person plays in the dispute. */
-    role: PersonRole;
-    /** City and/or country of residence, e.g. `'Melbourne, Australia'`. */
-    location: string;
-    /** Primary language for written communication. */
-    language: string;
-    /** Custody status description, e.g. `'sole physical custody'`. */
-    custodyStatus?: string;
-    /**
-     * Documented behavioral patterns. Used for strategic communication planning.
-     * Each pattern should have at least one recorded evidence instance before
-     * being added here.
-     */
-    behavioralPatterns?: BehavioralPattern[];
-    /**
-     * Prior legal events relevant to the case.
-     * Document outcomes and costs — the record matters.
-     */
-    legalHistory?: LegalRecord[];
-    /**
-     * Practical communication guidance for this parent.
-     * What works. What to avoid. What triggers escalation.
-     */
-    communicationNotes?: CommunicationNote[];
-    /** Free-form strategic notes — internal use only, never displayed publicly. */
-    notes?: string[];
-};
-
-export { ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, type BehavioralPattern, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, type CommunicationNote, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, type LegalRecord, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, type NestedChecklistState, type PersonProfile, type PersonRole, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, RadialProgressCard, type RadialProgressCardProps, type RadialProgressItem, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, type Task, type TaskDetails, TaskDetailsRenderer, TaskList, type TaskListProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, giselleTheme, hexToChannel, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel, useNestedChecklist };
+export { TOGGLE_ICON_SIZE as ACCORDION_CHECK_ICON_SIZE, ACCORDION_DONE_MIN_TOUCH_TARGET, TOGGLE_MIN_TOUCH_TARGET as ACCORDION_ICON_BUTTON_MIN_SIZE, Accordion, type AccordionProps, AnimatedGradientText, type AnimatedGradientTextProps, type BaseSettingsState, COMPACT_MILESTONE_DOT_SIZE, COMPACT_MIN_MILESTONE_DOT_SIZE, COMPACT_MIN_PHASE_DOT_SIZE, COMPACT_PHASE_DOT_SIZE, COMPACT_PHASE_ICON_SIZE, DEFAULT_ICON_ACTIONS, FloatingSubNav, type FloatingSubNavItem, type FloatingSubNavProps, GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, GiselleIcon, type GiselleIconData, type GiselleIconMap, type GiselleIconProps, type GiselleSettingsContextValue, GiselleSettingsProvider, type GiselleSettingsProviderProps, GiselleThemeAndSettingsProvider, type GiselleThemeAndSettingsProviderProps, GiselleThemeProvider, type GiselleThemeProviderProps, type HeroColorKey, HeroSection, type HeroSectionProps, type HighlightedPaletteKey, IconActionBar, type IconActionBarProps, type IconActionItem, MetricCard, type MetricCardColor, MetricCardDecoration, type MetricCardDecorationProps, type MetricCardProps, MilestoneBadge, type MilestoneBadgeProps, type NestedChecklistState, type PaletteColorKey, PhaseCard, type PhaseCardProps, QuoteCard, type QuoteCardProps, STAT_CARD_SPARKLINE_OPTIONS, SectionCaption, SectionContainer, type SectionContainerProps, SectionTitle, type SectionTitleProps, SelectableCard, type SelectableCardProps, type SetCookieOptions, type ShowcaseRowOrientation, StatCard, type StatCardColor, type StatCardItem, type StatCardProps, StatCardRow, type StatCardRowProps, type StorageAdapter, TOGGLE_ICON_SIZE, TOGGLE_MIN_TOUCH_TARGET, type Task, type TaskDetails, TaskDetailsRenderer, TaskList, type TaskListProps, type TechIconItem, TechIconStrip, type TechIconStripProps, type TimelineColumnLabels, TimelineCompact, type TimelineCompactProps, TimelineDot, type TimelineDotComponentProps, type TimelineMilestone, type TimelinePhase, type TimelinePlatformItem, type TimelineSectionData, type TimelineSidebar, TimelineTwoColumn, type TimelineTwoColumnProps, ToggleIconButton, type ToggleIconButtonProps, TwoColumnShowcaseRow, type TwoColumnShowcaseRowProps, type TwoColumnShowcaseRowText, type UseLocalStorageReturn, assignMilestoneSidesByDone, channelAlpha, createIconRegistrar, getCookieValue, giselleTheme, giselleThemeOptions, hexToChannel, isDeepEqual, pxToRem, remToPx, resolveCompactColor, resolveMaturityColor, resolveMaturityLabel, setCookieValue, useGiselleSettings, useLocalStorage, useNestedChecklist };

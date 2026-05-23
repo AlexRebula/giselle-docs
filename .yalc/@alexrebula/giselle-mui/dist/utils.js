@@ -22,6 +22,60 @@ function remToPx(rem) {
   return rem * 16;
 }
 
+// src/utils/is-deep-equal.ts
+function isDeepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!isDeepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (typeof a === "object") {
+    if (Array.isArray(b)) return false;
+    const objA = a;
+    const objB = b;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(objB, key)) return false;
+      if (!isDeepEqual(objA[key], objB[key])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// src/utils/cookie.ts
+function getCookieValue(name) {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.split("; ").find((row) => row.startsWith(`${encodeURIComponent(name)}=`));
+  if (!match) return null;
+  const raw = match.split("=").slice(1).join("=");
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+function setCookieValue(name, value, options = {}) {
+  if (typeof document === "undefined") return;
+  const { maxAge, path = "/", sameSite = "Lax" } = options;
+  const parts = [
+    `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+    `path=${path}`,
+    `SameSite=${sameSite}`
+  ];
+  if (maxAge !== void 0) parts.push(`max-age=${maxAge}`);
+  if (sameSite === "None") parts.push("Secure");
+  document.cookie = parts.join("; ");
+}
+
 // src/utils/maturity-utils.ts
 function resolveMaturityColor(percent) {
   const clamped = Math.max(0, Math.min(100, percent));
@@ -56,7 +110,7 @@ import { extendTheme } from "@mui/material/styles";
 var GISELLE_PRIMARY_MAIN = "#2E7D32";
 var GISELLE_PRIMARY_DARK_MAIN = "#76C442";
 var GISELLE_SECONDARY_MAIN = "#F5A623";
-var giselleTheme = extendTheme({
+var giselleThemeOptions = {
   colorSchemes: {
     light: {
       palette: {
@@ -79,18 +133,37 @@ var giselleTheme = extendTheme({
       }
     }
   }
-});
+};
+var giselleTheme = extendTheme(giselleThemeOptions);
+
+// src/utils/use-image-preloader.ts
+import { preload } from "react-dom";
+function useImagePreloader(srcs, highPrioritySrc) {
+  srcs.forEach((src) => {
+    if (src) {
+      preload(src, {
+        as: "image",
+        fetchPriority: src === highPrioritySrc ? "high" : "auto"
+      });
+    }
+  });
+}
 export {
   GISELLE_PRIMARY_DARK_MAIN,
   GISELLE_PRIMARY_MAIN,
   GISELLE_SECONDARY_MAIN,
   assignMilestoneSidesByDone,
   channelAlpha,
+  getCookieValue,
   giselleTheme,
+  giselleThemeOptions,
   hexToChannel,
+  isDeepEqual,
   pxToRem,
   remToPx,
   resolveMaturityColor,
-  resolveMaturityLabel
+  resolveMaturityLabel,
+  setCookieValue,
+  useImagePreloader
 };
 //# sourceMappingURL=utils.js.map

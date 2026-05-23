@@ -47,12 +47,127 @@ function remToPx(rem) {
   return rem * 16;
 }
 
+// src/utils/is-deep-equal.ts
+function isDeepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null) return false;
+  if (typeof a !== typeof b) return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!isDeepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (typeof a === "object") {
+    if (Array.isArray(b)) return false;
+    const objA = a;
+    const objB = b;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (!Object.prototype.hasOwnProperty.call(objB, key)) return false;
+      if (!isDeepEqual(objA[key], objB[key])) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// src/utils/cookie.ts
+function getCookieValue(name) {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.split("; ").find((row) => row.startsWith(`${encodeURIComponent(name)}=`));
+  if (!match) return null;
+  const raw = match.split("=").slice(1).join("=");
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+}
+function setCookieValue(name, value, options = {}) {
+  if (typeof document === "undefined") return;
+  const { maxAge, path = "/", sameSite = "Lax" } = options;
+  const parts = [
+    `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+    `path=${path}`,
+    `SameSite=${sameSite}`
+  ];
+  if (maxAge !== void 0) parts.push(`max-age=${maxAge}`);
+  if (sameSite === "None") parts.push("Secure");
+  document.cookie = parts.join("; ");
+}
+
+// src/utils/use-local-storage.ts
+import { useState, useEffect, useCallback } from "react";
+function readFromStorage(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw !== null ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeToStorage(key, value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+  }
+}
+function removeFromStorage(key) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+  }
+}
+function useLocalStorage(key, initialValue) {
+  const [state, setStateInternal] = useState(initialValue);
+  useEffect(() => {
+    const stored = readFromStorage(key, initialValue);
+    setStateInternal(stored);
+  }, [key]);
+  const setState = useCallback(
+    (partial) => {
+      setStateInternal((prev) => {
+        const next = { ...prev, ...partial };
+        writeToStorage(key, next);
+        return next;
+      });
+    },
+    [key]
+  );
+  const setField = useCallback(
+    (field, value) => {
+      setStateInternal((prev) => {
+        const next = { ...prev, [field]: value };
+        writeToStorage(key, next);
+        return next;
+      });
+    },
+    [key]
+  );
+  const resetState = useCallback(
+    (defaults) => {
+      removeFromStorage(key);
+      setStateInternal(defaults);
+    },
+    [key]
+  );
+  return { state, setState, setField, resetState };
+}
+
 // src/utils/theme-preset.ts
 import { extendTheme } from "@mui/material/styles";
 var GISELLE_PRIMARY_MAIN = "#2E7D32";
 var GISELLE_PRIMARY_DARK_MAIN = "#76C442";
 var GISELLE_SECONDARY_MAIN = "#F5A623";
-var giselleTheme = extendTheme({
+var giselleThemeOptions = {
   colorSchemes: {
     light: {
       palette: {
@@ -75,7 +190,231 @@ var giselleTheme = extendTheme({
       }
     }
   }
-});
+};
+var giselleTheme = extendTheme(giselleThemeOptions);
+
+// src/components/theme-provider/giselle/giselle.tsx
+import { useMemo } from "react";
+import { ThemeProvider, extendTheme as extendTheme2 } from "@mui/material/styles";
+
+// src/utils/deep-merge.ts
+var DANGEROUS_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function deepMerge(base, override) {
+  const result = { ...base };
+  const src = override;
+  for (const key of Object.keys(src)) {
+    if (DANGEROUS_KEYS.has(key)) continue;
+    const baseVal = result[key];
+    const overrideVal = src[key];
+    if (isPlainObject(baseVal) && isPlainObject(overrideVal)) {
+      result[key] = deepMerge(
+        baseVal,
+        overrideVal
+      );
+    } else if (overrideVal !== void 0) {
+      result[key] = overrideVal;
+    }
+  }
+  return result;
+}
+function isPlainObject(val) {
+  return typeof val === "object" && val !== null && !Array.isArray(val) && Object.getPrototypeOf(val) === Object.prototype;
+}
+
+// src/components/theme-provider/giselle/giselle.tsx
+import { jsx } from "react/jsx-runtime";
+function GiselleThemeProvider({
+  children,
+  themeOverrides,
+  theme,
+  defaultMode = "system"
+}) {
+  const resolvedTheme = useMemo(
+    () => theme ?? (themeOverrides ? extendTheme2(deepMerge(giselleThemeOptions, themeOverrides)) : giselleTheme),
+    [theme, themeOverrides]
+  );
+  return /* @__PURE__ */ jsx(ThemeProvider, { theme: resolvedTheme, defaultMode, children });
+}
+
+// src/components/settings-provider/settings-provider.tsx
+import { useCallback as useCallback2, useEffect as useEffect2, useMemo as useMemo2, useRef, useState as useState2 } from "react";
+
+// src/components/settings-provider/settings-context.ts
+import { createContext, useContext } from "react";
+var GiselleSettingsContext = createContext(null);
+function useGiselleSettings() {
+  const ctx = useContext(GiselleSettingsContext);
+  if (ctx === null) {
+    throw new Error("useGiselleSettings must be called within a <GiselleSettingsProvider>.");
+  }
+  return ctx;
+}
+
+// src/components/settings-provider/settings-provider.tsx
+import { jsx as jsx2 } from "react/jsx-runtime";
+var DEFAULT_STORAGE_KEY = "giselle-settings";
+function buildLocalStorageAdapter(storageKey) {
+  return {
+    get: () => {
+      if (typeof window === "undefined") return null;
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+        return raw !== null ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    },
+    set: (value) => {
+      if (typeof window === "undefined") return;
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(value));
+      } catch {
+      }
+    },
+    clear: () => {
+      if (typeof window === "undefined") return;
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+      }
+    }
+  };
+}
+function buildCookieAdapter(storageKey) {
+  return {
+    get: () => {
+      const raw = getCookieValue(storageKey);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    },
+    set: (value) => {
+      setCookieValue(storageKey, JSON.stringify(value), { path: "/", sameSite: "Lax" });
+    },
+    clear: () => {
+      setCookieValue(storageKey, "", { maxAge: 0, path: "/" });
+    }
+  };
+}
+function resolveAdapter(storage, storageKey) {
+  if (storage === "localStorage") return buildLocalStorageAdapter(storageKey);
+  if (storage === "cookie") return buildCookieAdapter(storageKey);
+  return storage;
+}
+function GiselleSettingsProvider({
+  children,
+  defaultSettings,
+  initialState,
+  storageKey = DEFAULT_STORAGE_KEY,
+  storage = "localStorage"
+}) {
+  const adapterRef = useRef(resolveAdapter(storage, storageKey));
+  adapterRef.current = resolveAdapter(storage, storageKey);
+  const [state, setStateRaw] = useState2(initialState ?? defaultSettings);
+  useEffect2(() => {
+    if (initialState !== void 0) return;
+    const stored = adapterRef.current.get();
+    if (stored === null) return;
+    if (stored.version !== defaultSettings.version) {
+      adapterRef.current.clear();
+      return;
+    }
+    setStateRaw(stored);
+  }, []);
+  const [openDrawer, setOpenDrawer] = useState2(false);
+  const setState = useCallback2((partial) => {
+    setStateRaw((prev) => {
+      const next = { ...prev, ...partial };
+      adapterRef.current.set(next);
+      return next;
+    });
+  }, []);
+  const setField = useCallback2((key, value2) => {
+    setStateRaw((prev) => {
+      const next = { ...prev, [key]: value2 };
+      adapterRef.current.set(next);
+      return next;
+    });
+  }, []);
+  const onReset = useCallback2(() => {
+    adapterRef.current.clear();
+    setStateRaw(defaultSettings);
+  }, [defaultSettings]);
+  const onCloseDrawer = useCallback2(() => setOpenDrawer(false), []);
+  const onToggleDrawer = useCallback2(() => setOpenDrawer((prev) => !prev), []);
+  const canReset = useMemo2(() => !isDeepEqual(state, defaultSettings), [state, defaultSettings]);
+  const value = useMemo2(
+    () => ({
+      state,
+      setState,
+      setField,
+      canReset,
+      onReset,
+      openDrawer,
+      onCloseDrawer,
+      onToggleDrawer
+    }),
+    [state, setState, setField, canReset, onReset, openDrawer, onCloseDrawer, onToggleDrawer]
+  );
+  return /* @__PURE__ */ jsx2(
+    GiselleSettingsContext.Provider,
+    {
+      value,
+      children
+    }
+  );
+}
+
+// src/components/settings-provider/theme-and-settings-provider.tsx
+import { Fragment } from "react";
+
+// src/components/settings-provider/settings-theme-bridge.tsx
+import { useEffect as useEffect3 } from "react";
+import { useColorScheme } from "@mui/material/styles";
+function SettingsThemeBridge({
+  getMode
+}) {
+  const { state } = useGiselleSettings();
+  const { setMode } = useColorScheme();
+  const mode = getMode?.(state);
+  useEffect3(() => {
+    if (mode !== void 0) {
+      setMode(mode);
+    }
+  }, [mode, setMode]);
+  return null;
+}
+
+// src/components/settings-provider/theme-and-settings-provider.tsx
+import { jsx as jsx3, jsxs } from "react/jsx-runtime";
+function GiselleThemeAndSettingsProvider({
+  children,
+  defaultSettings,
+  initialState,
+  storageKey,
+  storage,
+  themeOverrides,
+  theme,
+  defaultMode,
+  getMode
+}) {
+  return /* @__PURE__ */ jsx3(GiselleThemeProvider, { themeOverrides, theme, defaultMode, children: /* @__PURE__ */ jsx3(
+    GiselleSettingsProvider,
+    {
+      defaultSettings,
+      initialState,
+      storageKey,
+      storage,
+      children: /* @__PURE__ */ jsxs(Fragment, { children: [
+        /* @__PURE__ */ jsx3(SettingsThemeBridge, { getMode }),
+        children
+      ] })
+    }
+  ) });
+}
 
 // src/components/icon/giselle/giselle-icon.tsx
 import { Icon } from "@iconify/react";
@@ -91,7 +430,7 @@ var giselleIconRootSx = (width, height) => ({
 });
 
 // src/components/icon/giselle/giselle-icon.tsx
-import { jsx } from "react/jsx-runtime";
+import { jsx as jsx4 } from "react/jsx-runtime";
 function GiselleIcon({
   icon,
   width = 20,
@@ -100,21 +439,30 @@ function GiselleIcon({
   className,
   style,
   flip,
-  rotate
+  rotate,
+  ...other
 }) {
   const h = height ?? width;
-  return /* @__PURE__ */ jsx(Box, { component: "span", sx: [giselleIconRootSx(width, h), ...Array.isArray(sx) ? sx : [sx]], children: /* @__PURE__ */ jsx(
-    Icon,
+  return /* @__PURE__ */ jsx4(
+    Box,
     {
-      icon,
-      width: "100%",
-      height: "100%",
-      flip,
-      rotate,
-      className,
-      style
+      component: "span",
+      sx: [giselleIconRootSx(width, h), ...Array.isArray(sx) ? sx : [sx]],
+      ...other,
+      children: /* @__PURE__ */ jsx4(
+        Icon,
+        {
+          icon,
+          width: "100%",
+          height: "100%",
+          flip,
+          rotate,
+          className,
+          style
+        }
+      )
     }
-  ) });
+  );
 }
 
 // src/components/accordion/accordion.tsx
@@ -126,17 +474,87 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Typography from "@mui/material/Typography";
 
-// src/components/accordion/check-icon-button.tsx
-import { useCallback } from "react";
-import SvgIcon from "@mui/material/SvgIcon";
+// src/components/inputs/button/toggle/icon/icon.tsx
+import { useCallback as useCallback3 } from "react";
 import IconButton from "@mui/material/IconButton";
 
-// src/components/accordion/accordion.const.ts
-var ACCORDION_DONE_MIN_TOUCH_TARGET = 24;
-var ACCORDION_CHECK_ICON_SIZE = 20;
-var ACCORDION_ICON_BUTTON_MIN_SIZE = 28;
+// src/components/inputs/button/toggle/icon/icon.defaults.tsx
+import SvgIcon from "@mui/material/SvgIcon";
+
+// src/components/inputs/button/toggle/icon/icon.const.ts
+var TOGGLE_ICON_SIZE = 20;
+var TOGGLE_MIN_TOUCH_TARGET = 28;
+
+// src/components/inputs/button/toggle/icon/icon.styles.ts
+var rootSx = {
+  padding: 0,
+  flexShrink: 0,
+  alignSelf: "center",
+  minWidth: TOGGLE_MIN_TOUCH_TARGET,
+  minHeight: TOGGLE_MIN_TOUCH_TARGET,
+  // idle (not pressed)
+  "& .ti-idle": { display: "flex", alignItems: "center" },
+  "& .ti-pressed": { display: "none" },
+  "& .ti-hover": { display: "none" },
+  // pressed
+  '&[aria-pressed="true"] .ti-idle': { display: "none" },
+  '&[aria-pressed="true"] .ti-pressed': { display: "flex", alignItems: "center" },
+  // hover (any pressed state)
+  "&:hover .ti-idle": { display: "none" },
+  "&:hover .ti-pressed": { display: "none" },
+  "&:hover .ti-hover": { display: "flex", alignItems: "center" },
+  // keyboard focus-visible
+  "&:focus-visible .ti-idle": { display: "none" },
+  "&:focus-visible .ti-pressed": { display: "none" },
+  "&:focus-visible .ti-hover": { display: "flex", alignItems: "center" }
+};
+var defaultIconSvgSx = {
+  color: "success.main",
+  fontSize: TOGGLE_ICON_SIZE
+};
+
+// src/components/inputs/button/toggle/icon/icon.defaults.tsx
+import { jsx as jsx5 } from "react/jsx-runtime";
+var DEFAULT_PRESSED_ICON = /* @__PURE__ */ jsx5(SvgIcon, { sx: defaultIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx5("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" }) });
+var DEFAULT_HOVER_ICON = /* @__PURE__ */ jsx5(SvgIcon, { sx: defaultIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx5("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
+
+// src/components/inputs/button/toggle/icon/icon.tsx
+import { jsx as jsx6, jsxs as jsxs2 } from "react/jsx-runtime";
+function ToggleIconButton({
+  pressed,
+  idleIcon,
+  pressedIcon = DEFAULT_PRESSED_ICON,
+  hoverIcon = DEFAULT_HOVER_ICON,
+  onPressedChange,
+  sx,
+  ...other
+}) {
+  const handleClick = useCallback3(
+    (e) => {
+      e.stopPropagation();
+      onPressedChange?.(!pressed);
+    },
+    [pressed, onPressedChange]
+  );
+  return /* @__PURE__ */ jsxs2(
+    IconButton,
+    {
+      onClick: handleClick,
+      "aria-pressed": pressed,
+      size: "small",
+      sx: [rootSx, ...Array.isArray(sx) ? sx : [sx]],
+      ...other,
+      children: [
+        /* @__PURE__ */ jsx6("span", { className: "ti-idle", children: idleIcon }),
+        /* @__PURE__ */ jsx6("span", { className: "ti-pressed", children: pressedIcon }),
+        /* @__PURE__ */ jsx6("span", { className: "ti-hover", children: hoverIcon })
+      ]
+    }
+  );
+}
 
 // src/components/accordion/accordion.styles.ts
+var accordionRootSx = {};
 var summaryRowSx = {
   display: "flex",
   alignItems: "center",
@@ -145,30 +563,6 @@ var summaryRowSx = {
 var checkboxSx = {
   flexShrink: 0,
   alignSelf: "center"
-};
-var checkIconButtonSx = {
-  padding: 0,
-  flexShrink: 0,
-  alignSelf: "center",
-  // idle — not done
-  "& .ci-idle": { display: "flex", alignItems: "center" },
-  "& .ci-done": { display: "none" },
-  "& .ci-hover": { display: "none" },
-  // done
-  '&[aria-pressed="true"] .ci-idle': { display: "none" },
-  '&[aria-pressed="true"] .ci-done': { display: "flex", alignItems: "center" },
-  // hover (any done state)
-  "&:hover .ci-idle": { display: "none" },
-  "&:hover .ci-done": { display: "none" },
-  "&:hover .ci-hover": { display: "flex", alignItems: "center" },
-  // keyboard focus-visible
-  "&:focus-visible .ci-idle": { display: "none" },
-  "&:focus-visible .ci-done": { display: "none" },
-  "&:focus-visible .ci-hover": { display: "flex", alignItems: "center" }
-};
-var defaultCheckIconSvgSx = {
-  color: "success.main",
-  fontSize: ACCORDION_CHECK_ICON_SIZE
 };
 var leadingIconSx = {
   display: "flex",
@@ -181,43 +575,8 @@ var summarySx = {
   minWidth: 0
 };
 
-// src/components/accordion/check-icon-button.tsx
-import { jsx as jsx2, jsxs } from "react/jsx-runtime";
-var DEFAULT_CHECK_DONE_ICON = /* @__PURE__ */ jsx2(SvgIcon, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx2("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" }) });
-var DEFAULT_CHECK_HOVER_ICON = /* @__PURE__ */ jsx2(SvgIcon, { sx: defaultCheckIconSvgSx, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx2("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
-function CheckIconButton({
-  done,
-  checkIcon,
-  checkDoneIcon = DEFAULT_CHECK_DONE_ICON,
-  checkHoverIcon = DEFAULT_CHECK_HOVER_ICON,
-  onDoneButtonClick
-}) {
-  const handleClick = useCallback(
-    (e) => {
-      e.stopPropagation();
-      onDoneButtonClick?.(!done);
-    },
-    [done, onDoneButtonClick]
-  );
-  return /* @__PURE__ */ jsxs(
-    IconButton,
-    {
-      onClick: handleClick,
-      "aria-pressed": done,
-      "aria-label": done ? "Mark as not done" : "Mark as done",
-      size: "small",
-      sx: checkIconButtonSx,
-      children: [
-        /* @__PURE__ */ jsx2("span", { className: "ci-idle", children: checkIcon }),
-        /* @__PURE__ */ jsx2("span", { className: "ci-done", children: checkDoneIcon }),
-        /* @__PURE__ */ jsx2("span", { className: "ci-hover", children: checkHoverIcon })
-      ]
-    }
-  );
-}
-
 // src/components/accordion/accordion.tsx
-import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
 function Accordion({
   title,
   children,
@@ -247,42 +606,39 @@ function Accordion({
   const hasLeadingElement = checklist || leadingIcon !== void 0 || leadingAction !== void 0;
   let leadingElement = null;
   if (checklist) {
-    if (checkIcon === void 0) {
-      leadingElement = /* @__PURE__ */ jsx3(
-        Checkbox,
-        {
-          checked: done,
-          indeterminate,
-          onChange: handleCheckboxChange,
-          onClick: handleCheckboxClick,
-          slotProps: {
-            input: {
-              "aria-label": done ? "Mark as not done" : "Mark as done"
-            }
-          },
-          size: "small",
-          sx: checkboxSx
-        }
-      );
-    } else {
-      leadingElement = /* @__PURE__ */ jsx3(
-        CheckIconButton,
-        {
-          done,
-          checkIcon,
-          checkDoneIcon,
-          checkHoverIcon,
-          onDoneButtonClick
-        }
-      );
-    }
+    leadingElement = checkIcon === void 0 ? /* @__PURE__ */ jsx7(
+      Checkbox,
+      {
+        checked: done,
+        indeterminate,
+        onChange: handleCheckboxChange,
+        onClick: handleCheckboxClick,
+        slotProps: {
+          input: {
+            "aria-label": done ? "Mark as not done" : "Mark as done"
+          }
+        },
+        size: "small",
+        sx: checkboxSx
+      }
+    ) : /* @__PURE__ */ jsx7(
+      ToggleIconButton,
+      {
+        pressed: done,
+        idleIcon: checkIcon,
+        pressedIcon: checkDoneIcon,
+        hoverIcon: checkHoverIcon,
+        onPressedChange: onDoneButtonClick,
+        "aria-label": done ? "Mark as not done" : "Mark as done"
+      }
+    );
   } else if (leadingAction === void 0) {
-    leadingElement = /* @__PURE__ */ jsx3(Box2, { "aria-hidden": "true", sx: leadingIconSx, children: leadingIcon });
+    leadingElement = /* @__PURE__ */ jsx7(Box2, { "aria-hidden": "true", sx: leadingIconSx, children: leadingIcon });
   } else {
     leadingElement = leadingAction;
   }
-  const summaryContent = typeof title === "string" ? /* @__PURE__ */ jsx3(Typography, { component: "span", variant: "subtitle1", children: title }) : title;
-  const accordionSummary = /* @__PURE__ */ jsxs2(
+  const summaryContent = typeof title === "string" ? /* @__PURE__ */ jsx7(Typography, { component: "span", variant: "subtitle1", children: title }) : title;
+  const accordionSummary = /* @__PURE__ */ jsxs3(
     AccordionSummary,
     {
       expandIcon,
@@ -295,14 +651,17 @@ function Accordion({
       ]
     }
   );
-  return /* @__PURE__ */ jsxs2(MuiAccordion, { sx: [...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    hasLeadingElement ? /* @__PURE__ */ jsxs2(Box2, { sx: summaryRowSx, children: [
+  return /* @__PURE__ */ jsxs3(MuiAccordion, { sx: [accordionRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    hasLeadingElement ? /* @__PURE__ */ jsxs3(Box2, { sx: summaryRowSx, children: [
       leadingElement,
       accordionSummary
     ] }) : accordionSummary,
-    /* @__PURE__ */ jsx3(AccordionDetails, { id: detailsId, children })
+    /* @__PURE__ */ jsx7(AccordionDetails, { id: detailsId, children })
   ] });
 }
+
+// src/components/accordion/accordion.const.ts
+var ACCORDION_DONE_MIN_TOUCH_TARGET = 24;
 
 // src/components/card/metric/metric-card.tsx
 import Box4 from "@mui/material/Box";
@@ -358,17 +717,17 @@ var metricCardDecorationSx = (color) => (theme) => ({
 
 // src/components/card/metric/metric-card-decoration.tsx
 import Box3 from "@mui/material/Box";
-import { jsx as jsx4 } from "react/jsx-runtime";
+import { jsx as jsx8 } from "react/jsx-runtime";
 function MetricCardDecoration({
   color = "primary",
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx4(Box3, { sx: [metricCardDecorationSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other });
+  return /* @__PURE__ */ jsx8(Box3, { sx: [metricCardDecorationSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other });
 }
 
 // src/components/card/metric/metric-card.tsx
-import { jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs4 } from "react/jsx-runtime";
 function MetricCard({
   value,
   label,
@@ -380,18 +739,18 @@ function MetricCard({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsxs3(
+  return /* @__PURE__ */ jsxs4(
     Paper,
     {
       elevation,
       sx: [metricCardPaperSx, ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children: [
-        decoration && /* @__PURE__ */ jsx5(Box4, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
-        /* @__PURE__ */ jsxs3(Box4, { sx: metricCardContentSx, children: [
-          /* @__PURE__ */ jsx5(Box4, { sx: { typography: "h3" }, children: value }),
-          /* @__PURE__ */ jsx5(Typography2, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
-          sublabel && /* @__PURE__ */ jsx5(
+        decoration && /* @__PURE__ */ jsx9(Box4, { "aria-hidden": "true", sx: decorationOverlaySx, children: decoration }),
+        /* @__PURE__ */ jsxs4(Box4, { sx: metricCardContentSx, children: [
+          /* @__PURE__ */ jsx9(Box4, { sx: { typography: "h3" }, children: value }),
+          /* @__PURE__ */ jsx9(Typography2, { noWrap: true, variant: "subtitle2", component: "div", sx: { color: "text.secondary" }, children: label }),
+          sublabel && /* @__PURE__ */ jsx9(
             Typography2,
             {
               noWrap: true,
@@ -402,7 +761,7 @@ function MetricCard({
             }
           )
         ] }),
-        icon && /* @__PURE__ */ jsx5(Box4, { "aria-hidden": "true", sx: metricCardIconBoxSx(color), children: icon })
+        icon && /* @__PURE__ */ jsx9(Box4, { "aria-hidden": "true", sx: metricCardIconBoxSx(color), children: icon })
       ]
     }
   );
@@ -453,7 +812,7 @@ var selectableCardSx = (selected) => (theme) => ({
 });
 
 // src/components/card/selectable/selectable-card.tsx
-import { jsx as jsx6 } from "react/jsx-runtime";
+import { jsx as jsx10 } from "react/jsx-runtime";
 function SelectableCard({
   selected = false,
   disabled = false,
@@ -461,7 +820,7 @@ function SelectableCard({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx10(
     ButtonBase,
     {
       disabled,
@@ -505,7 +864,7 @@ var quoteCardPaperSx = (color) => (theme) => ({
 });
 
 // src/components/card/quote/quote-card.tsx
-import { jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx11, jsxs as jsxs5 } from "react/jsx-runtime";
 function QuoteCard({
   quote,
   author,
@@ -515,17 +874,17 @@ function QuoteCard({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx7(
+  return /* @__PURE__ */ jsx11(
     Paper2,
     {
       elevation,
       sx: [quoteCardPaperSx(color), ...Array.isArray(sx) ? sx : [sx]],
       ...other,
-      children: /* @__PURE__ */ jsxs4(Box5, { sx: { display: "flex", gap: 2 }, children: [
-        /* @__PURE__ */ jsx7(Typography3, { "aria-hidden": true, sx: quoteMarkSx(color), children: "\u201C" }),
-        /* @__PURE__ */ jsxs4(Box5, { sx: { flex: 1, minWidth: 0 }, children: [
-          /* @__PURE__ */ jsx7(Typography3, { variant: "body1", sx: quoteTextSx, children: quote }),
-          (author || source) && /* @__PURE__ */ jsxs4(
+      children: /* @__PURE__ */ jsxs5(Box5, { sx: { display: "flex", gap: 2 }, children: [
+        /* @__PURE__ */ jsx11(Typography3, { "aria-hidden": true, sx: quoteMarkSx(color), children: "\u201C" }),
+        /* @__PURE__ */ jsxs5(Box5, { sx: { flex: 1, minWidth: 0 }, children: [
+          /* @__PURE__ */ jsx11(Typography3, { variant: "body1", sx: quoteTextSx, children: quote }),
+          (author || source) && /* @__PURE__ */ jsxs5(
             Stack,
             {
               direction: "row",
@@ -533,9 +892,9 @@ function QuoteCard({
               alignItems: "center",
               sx: { mt: 2, color: "text.disabled" },
               children: [
-                author && /* @__PURE__ */ jsx7(Typography3, { variant: "caption", sx: { fontWeight: "fontWeightMedium" }, children: author }),
-                author && source && /* @__PURE__ */ jsx7(Typography3, { variant: "caption", "aria-hidden": true, sx: { opacity: 0.6 }, children: "\xB7" }),
-                source && /* @__PURE__ */ jsx7(Typography3, { variant: "caption", sx: { opacity: 0.72 }, children: source })
+                author && /* @__PURE__ */ jsx11(Typography3, { variant: "caption", sx: { fontWeight: "fontWeightMedium" }, children: author }),
+                author && source && /* @__PURE__ */ jsx11(Typography3, { variant: "caption", "aria-hidden": true, sx: { opacity: 0.6 }, children: "\xB7" }),
+                source && /* @__PURE__ */ jsx11(Typography3, { variant: "caption", sx: { opacity: 0.72 }, children: source })
               ]
             }
           )
@@ -549,6 +908,10 @@ function QuoteCard({
 import Box6 from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import Typography4 from "@mui/material/Typography";
+
+// src/components/card/stat/stat-card.const.ts
+var STAT_CARD_ICON_BOX_SIZE = 48;
+var STAT_CARD_LABELS_MIN_WIDTH = 112;
 
 // src/components/card/stat/stat-card.styles.ts
 var statCardRootSx = (color) => (theme) => ({
@@ -569,8 +932,8 @@ var trendBoxSx = {
 };
 var iconBoxSx = {
   mb: 3,
-  width: 48,
-  height: 48,
+  width: STAT_CARD_ICON_BOX_SIZE,
+  height: STAT_CARD_ICON_BOX_SIZE,
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-start"
@@ -583,7 +946,7 @@ var contentRowSx = {
 };
 var labelsBoxSx = {
   flexGrow: 1,
-  minWidth: 112
+  minWidth: STAT_CARD_LABELS_MIN_WIDTH
 };
 var decorationSx = {
   position: "absolute",
@@ -603,9 +966,9 @@ var STAT_CARD_SPARKLINE_OPTIONS = {
 };
 
 // src/components/card/stat/stat-card-shape.tsx
-import { jsx as jsx8, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs6 } from "react/jsx-runtime";
 function StatCardShape() {
-  return /* @__PURE__ */ jsxs5(
+  return /* @__PURE__ */ jsxs6(
     "svg",
     {
       width: "120",
@@ -614,7 +977,7 @@ function StatCardShape() {
       fill: "none",
       xmlns: "http://www.w3.org/2000/svg",
       children: [
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx12(
           "rect",
           {
             x: "14",
@@ -627,7 +990,7 @@ function StatCardShape() {
             fillOpacity: "0.16"
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx12(
           "rect",
           {
             x: "32",
@@ -646,7 +1009,7 @@ function StatCardShape() {
 }
 
 // src/components/card/stat/stat-card.tsx
-import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs7 } from "react/jsx-runtime";
 function StatCard({
   label,
   value,
@@ -659,17 +1022,17 @@ function StatCard({
   ...other
 }) {
   const isUp = (trend ?? 0) >= 0;
-  return /* @__PURE__ */ jsxs6(Card, { sx: [statCardRootSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    /* @__PURE__ */ jsx9(Box6, { "aria-hidden": "true", sx: decorationSx, children: /* @__PURE__ */ jsx9(StatCardShape, {}) }),
-    /* @__PURE__ */ jsx9(Box6, { sx: iconBoxSx, children: icon }),
-    trend !== void 0 && /* @__PURE__ */ jsxs6(Box6, { sx: trendBoxSx, children: [
-      /* @__PURE__ */ jsx9(GiselleIcon, { width: 20, icon: isUp ? "eva:trending-up-fill" : "eva:trending-down-fill" }),
-      /* @__PURE__ */ jsxs6(Typography4, { component: "span", variant: "subtitle2", children: [
+  return /* @__PURE__ */ jsxs7(Card, { sx: [statCardRootSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    /* @__PURE__ */ jsx13(Box6, { "aria-hidden": "true", sx: decorationSx, children: /* @__PURE__ */ jsx13(StatCardShape, {}) }),
+    /* @__PURE__ */ jsx13(Box6, { sx: iconBoxSx, children: icon }),
+    trend !== void 0 && /* @__PURE__ */ jsxs7(Box6, { sx: trendBoxSx, children: [
+      /* @__PURE__ */ jsx13(GiselleIcon, { width: 20, icon: isUp ? "eva:trending-up-fill" : "eva:trending-down-fill" }),
+      /* @__PURE__ */ jsxs7(Typography4, { component: "span", variant: "subtitle2", children: [
         isUp && "+",
         trend,
         "%"
       ] }),
-      trendLabel && /* @__PURE__ */ jsx9(
+      trendLabel && /* @__PURE__ */ jsx13(
         Typography4,
         {
           component: "span",
@@ -679,21 +1042,39 @@ function StatCard({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxs6(Box6, { sx: contentRowSx, children: [
-      /* @__PURE__ */ jsxs6(Box6, { sx: labelsBoxSx, children: [
-        /* @__PURE__ */ jsx9(Typography4, { variant: "subtitle2", sx: { mb: 0.5 }, children: label }),
-        /* @__PURE__ */ jsx9(Typography4, { variant: "h4", children: value })
+    /* @__PURE__ */ jsxs7(Box6, { sx: contentRowSx, children: [
+      /* @__PURE__ */ jsxs7(Box6, { sx: labelsBoxSx, children: [
+        /* @__PURE__ */ jsx13(Typography4, { variant: "subtitle2", sx: { mb: 0.5 }, children: label }),
+        /* @__PURE__ */ jsx13(Typography4, { variant: "h4", children: value })
       ] }),
       chart
     ] })
   ] });
 }
 
+// src/components/card/stat-row/stat-card-row.tsx
+import Grid from "@mui/material/Grid";
+import { jsx as jsx14 } from "react/jsx-runtime";
+function StatCardRow({ items, renderChart, sx, ...other }) {
+  return /* @__PURE__ */ jsx14(Grid, { container: true, spacing: 3, sx: [...Array.isArray(sx) ? sx : [sx]], ...other, children: items.map((item) => /* @__PURE__ */ jsx14(Grid, { size: { xs: 12, sm: 6, md: 3 }, children: /* @__PURE__ */ jsx14(
+    StatCard,
+    {
+      label: item.label,
+      value: item.value,
+      trend: item.trend,
+      trendLabel: item.trendLabel,
+      color: item.color,
+      icon: /* @__PURE__ */ jsx14(GiselleIcon, { icon: item.iconId, width: 28 }),
+      chart: renderChart?.(item)
+    }
+  ) }, item.label)) });
+}
+
 // src/components/timeline/two-column/phase-card/phase-card.tsx
-import { useState as useState2, useRef, useCallback as useCallback3 } from "react";
+import { useState as useState4, useRef as useRef2, useCallback as useCallback5 } from "react";
 
 // src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
-import { useState, useCallback as useCallback2, useMemo, useEffect } from "react";
+import { useState as useState3, useCallback as useCallback4, useMemo as useMemo3, useEffect as useEffect4 } from "react";
 import Box8 from "@mui/material/Box";
 import Paper3 from "@mui/material/Paper";
 import Popper from "@mui/material/Popper";
@@ -1193,12 +1574,12 @@ function resolveSliderColor(color) {
 }
 
 // src/components/timeline/two-column/phase-warning-popover/mini-gantt-ruler.tsx
-import { jsx as jsx10 } from "react/jsx-runtime";
+import { jsx as jsx15 } from "react/jsx-runtime";
 function MiniGanttRuler({ axis, conflictingPhases, overrides }) {
   const span = axis.max - axis.min;
   if (span <= 0) return null;
   const rangeList = Array.from(overrides.entries());
-  return /* @__PURE__ */ jsx10(Box7, { "aria-hidden": true, sx: ganttTrackSx, children: conflictingPhases.map((phase) => {
+  return /* @__PURE__ */ jsx15(Box7, { "aria-hidden": true, sx: ganttTrackSx, children: conflictingPhases.map((phase) => {
     const override = overrides.get(phase.key);
     if (!override) return null;
     const leftPct = (override.startIdx - axis.min) / span * 100;
@@ -1207,12 +1588,12 @@ function MiniGanttRuler({ axis, conflictingPhases, overrides }) {
     const isOverlapping = rangeList.some(
       ([otherKey, other]) => otherKey !== phase.key && override.startIdx <= other.endIdx && other.startIdx <= override.endIdx
     );
-    return /* @__PURE__ */ jsx10(Box7, { sx: ganttBarSx(leftPct, widthPct, isOverlapping, sliderColor) }, phase.key);
+    return /* @__PURE__ */ jsx15(Box7, { sx: ganttBarSx(leftPct, widthPct, isOverlapping, sliderColor) }, phase.key);
   }) });
 }
 
 // src/components/timeline/two-column/phase-warning-popover/phase-warning-popover.tsx
-import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx16, jsxs as jsxs8 } from "react/jsx-runtime";
 function PhaseWarningPopover({
   open,
   anchorEl,
@@ -1221,13 +1602,13 @@ function PhaseWarningPopover({
   currentPhase,
   onPhasesChange
 }) {
-  const conflictingPhases = useMemo(
+  const conflictingPhases = useMemo3(
     () => getConnectedOverlapGroup(allPhases, currentPhase.key),
     [allPhases, currentPhase.key]
   );
-  const [overrides, setOverrides] = useState(() => /* @__PURE__ */ new Map());
-  const [pendingApply, setPendingApply] = useState(false);
-  useEffect(() => {
+  const [overrides, setOverrides] = useState3(() => /* @__PURE__ */ new Map());
+  const [pendingApply, setPendingApply] = useState3(false);
+  useEffect4(() => {
     if (!open) return;
     const initial = /* @__PURE__ */ new Map();
     for (const p of conflictingPhases) {
@@ -1237,9 +1618,9 @@ function PhaseWarningPopover({
     setOverrides(initial);
     setPendingApply(false);
   }, [open, conflictingPhases]);
-  const axis = useMemo(() => computeAxis(overrides), [overrides]);
-  const stillOverlapping = useMemo(() => hasRemainingOverlaps(overrides), [overrides]);
-  const handleSliderChange = useCallback2((phaseKey, value) => {
+  const axis = useMemo3(() => computeAxis(overrides), [overrides]);
+  const stillOverlapping = useMemo3(() => hasRemainingOverlaps(overrides), [overrides]);
+  const handleSliderChange = useCallback4((phaseKey, value) => {
     if (!Array.isArray(value)) return;
     const [start, end] = value;
     setOverrides((prev) => {
@@ -1249,7 +1630,7 @@ function PhaseWarningPopover({
     });
     setPendingApply(false);
   }, []);
-  const handleMakeSequential = useCallback2(() => {
+  const handleMakeSequential = useCallback4(() => {
     const withOverrides = applyOverrides(conflictingPhases, overrides);
     const resolved = resolveOverlaps(withOverrides);
     const next = /* @__PURE__ */ new Map();
@@ -1260,13 +1641,13 @@ function PhaseWarningPopover({
     setOverrides(next);
     setPendingApply(true);
   }, [conflictingPhases, overrides]);
-  const handleApply = useCallback2(() => {
+  const handleApply = useCallback4(() => {
     const withOverrides = applyOverrides(conflictingPhases, overrides);
     const merged = mergeIntoAll(allPhases, withOverrides);
     onPhasesChange(merged);
     onClose();
   }, [conflictingPhases, overrides, allPhases, onPhasesChange, onClose]);
-  const handleCancel = useCallback2(() => {
+  const handleCancel = useCallback4(() => {
     const initial = /* @__PURE__ */ new Map();
     for (const p of conflictingPhases) {
       const range = parsePhaseRange(p);
@@ -1277,7 +1658,7 @@ function PhaseWarningPopover({
   }, [conflictingPhases]);
   const warningCount = conflictingPhases.length;
   if (!open || !anchorEl) return null;
-  return /* @__PURE__ */ jsx11(
+  return /* @__PURE__ */ jsx16(
     Popper,
     {
       open,
@@ -1285,9 +1666,9 @@ function PhaseWarningPopover({
       placement: "bottom-start",
       modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
       sx: { zIndex: (theme) => theme.zIndex.tooltip + 1 },
-      children: /* @__PURE__ */ jsx11(ClickAwayListener, { onClickAway: onClose, children: /* @__PURE__ */ jsxs7(Paper3, { elevation: 8, sx: popoverPaperSx, children: [
-        /* @__PURE__ */ jsxs7(Box8, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-          /* @__PURE__ */ jsxs7(
+      children: /* @__PURE__ */ jsx16(ClickAwayListener, { onClickAway: onClose, children: /* @__PURE__ */ jsxs8(Paper3, { elevation: 8, sx: popoverPaperSx, children: [
+        /* @__PURE__ */ jsxs8(Box8, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+          /* @__PURE__ */ jsxs8(
             Typography5,
             {
               variant: "subtitle2",
@@ -1300,7 +1681,7 @@ function PhaseWarningPopover({
               ]
             }
           ),
-          /* @__PURE__ */ jsx11(
+          /* @__PURE__ */ jsx16(
             IconButton2,
             {
               size: "small",
@@ -1311,29 +1692,29 @@ function PhaseWarningPopover({
             }
           )
         ] }),
-        /* @__PURE__ */ jsx11(Divider, {}),
-        /* @__PURE__ */ jsxs7(Box8, { children: [
-          /* @__PURE__ */ jsx11(Typography5, { variant: "body2", color: "warning.main", sx: { fontWeight: 500 }, children: `Overlap: ${conflictingPhases.map((p) => p.shortTitle ?? p.title).join(" \u2194 ")}` }),
-          /* @__PURE__ */ jsxs7(Typography5, { variant: "caption", color: "text.secondary", sx: { mt: 0.5, display: "block" }, children: [
+        /* @__PURE__ */ jsx16(Divider, {}),
+        /* @__PURE__ */ jsxs8(Box8, { children: [
+          /* @__PURE__ */ jsx16(Typography5, { variant: "body2", color: "warning.main", sx: { fontWeight: 500 }, children: `Overlap: ${conflictingPhases.map((p) => p.shortTitle ?? p.title).join(" \u2194 ")}` }),
+          /* @__PURE__ */ jsxs8(Typography5, { variant: "caption", color: "text.secondary", sx: { mt: 0.5, display: "block" }, children: [
             currentPhase.shortTitle ?? currentPhase.title,
             " \u2014 adjust sliders or use Make sequential."
           ] })
         ] }),
-        /* @__PURE__ */ jsx11(Divider, {}),
-        /* @__PURE__ */ jsx11(Box8, { sx: { display: "flex", flexDirection: "column", gap: 1.5 }, children: conflictingPhases.map((phase) => {
+        /* @__PURE__ */ jsx16(Divider, {}),
+        /* @__PURE__ */ jsx16(Box8, { sx: { display: "flex", flexDirection: "column", gap: 1.5 }, children: conflictingPhases.map((phase) => {
           const override = overrides.get(phase.key);
           if (!override) return null;
           const sliderColor = resolveSliderColor(phase.color);
-          return /* @__PURE__ */ jsxs7(Box8, { children: [
-            /* @__PURE__ */ jsxs7(Box8, { sx: sliderRowHeaderSx, children: [
-              /* @__PURE__ */ jsx11(Typography5, { variant: "caption", fontWeight: 600, children: phase.shortTitle ?? phase.title }),
-              /* @__PURE__ */ jsxs7(Typography5, { variant: "caption", color: "text.secondary", children: [
+          return /* @__PURE__ */ jsxs8(Box8, { children: [
+            /* @__PURE__ */ jsxs8(Box8, { sx: sliderRowHeaderSx, children: [
+              /* @__PURE__ */ jsx16(Typography5, { variant: "caption", fontWeight: 600, children: phase.shortTitle ?? phase.title }),
+              /* @__PURE__ */ jsxs8(Typography5, { variant: "caption", color: "text.secondary", children: [
                 monthIndexToDate(override.startIdx),
                 " \u2013 ",
                 monthIndexToDate(override.endIdx)
               ] })
             ] }),
-            /* @__PURE__ */ jsx11(
+            /* @__PURE__ */ jsx16(
               Slider,
               {
                 value: [override.startIdx, override.endIdx],
@@ -1349,10 +1730,10 @@ function PhaseWarningPopover({
             )
           ] }, phase.key);
         }) }),
-        /* @__PURE__ */ jsx11(MiniGanttRuler, { axis, conflictingPhases, overrides }),
-        /* @__PURE__ */ jsx11(Divider, {}),
-        /* @__PURE__ */ jsxs7(Box8, { sx: actionsRowSx, children: [
-          /* @__PURE__ */ jsx11(
+        /* @__PURE__ */ jsx16(MiniGanttRuler, { axis, conflictingPhases, overrides }),
+        /* @__PURE__ */ jsx16(Divider, {}),
+        /* @__PURE__ */ jsxs8(Box8, { sx: actionsRowSx, children: [
+          /* @__PURE__ */ jsx16(
             Button,
             {
               size: "small",
@@ -1363,8 +1744,8 @@ function PhaseWarningPopover({
               children: "Make sequential"
             }
           ),
-          pendingApply && /* @__PURE__ */ jsxs7(Box8, { sx: { display: "flex", gap: 1 }, children: [
-            /* @__PURE__ */ jsx11(
+          pendingApply && /* @__PURE__ */ jsxs8(Box8, { sx: { display: "flex", gap: 1 }, children: [
+            /* @__PURE__ */ jsx16(
               Button,
               {
                 size: "small",
@@ -1375,7 +1756,7 @@ function PhaseWarningPopover({
                 children: "Apply"
               }
             ),
-            /* @__PURE__ */ jsx11(
+            /* @__PURE__ */ jsx16(
               Button,
               {
                 size: "small",
@@ -1399,8 +1780,8 @@ import Tooltip3 from "@mui/material/Tooltip";
 import Typography10 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/icons.tsx
-import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
-var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx12(
+import { jsx as jsx17, jsxs as jsxs9 } from "react/jsx-runtime";
+var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx17(
   "svg",
   {
     xmlns: "http://www.w3.org/2000/svg",
@@ -1409,10 +1790,10 @@ var DEFAULT_EXPANDABLE_ICON = /* @__PURE__ */ jsx12(
     viewBox: "0 0 24 24",
     "aria-hidden": "true",
     focusable: "false",
-    children: /* @__PURE__ */ jsx12("g", { children: /* @__PURE__ */ jsxs8("g", { fill: "currentColor", fillRule: "evenodd", clipRule: "evenodd", children: [
-      /* @__PURE__ */ jsx12("path", { d: "M8.308 5.148a3.15 3.15 0 0 1-3.154 3.148A3.15 3.15 0 0 1 2 5.148A3.15 3.15 0 0 1 5.154 2a3.15 3.15 0 0 1 3.154 3.148M5.154 6.296a1.15 1.15 0 0 0 1.154-1.148A1.15 1.15 0 0 0 5.154 4A1.15 1.15 0 0 0 4 5.148a1.15 1.15 0 0 0 1.154 1.148M21 18.924a3.15 3.15 0 0 1-3.154 3.147a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.147c1.732 0 3.154 1.4 3.154 3.148m-3.154 1.147A1.15 1.15 0 0 0 19 18.923c0-.633-.517-1.147-1.154-1.147a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.147M21 11.462a3.15 3.15 0 0 1-3.154 3.148a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.148A3.15 3.15 0 0 1 21 11.462m-3.154 1.148A1.15 1.15 0 0 0 19 11.462c0-.634-.517-1.148-1.154-1.148a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.148" }),
-      /* @__PURE__ */ jsx12("path", { d: "M5.154 7.018a1 1 0 0 1 1 1v6.784a3.154 3.154 0 0 0 3.13 3.154l5.724.044a1 1 0 0 1-.016 2l-5.724-.044a5.154 5.154 0 0 1-5.114-5.154V8.018a1 1 0 0 1 1-1" }),
-      /* @__PURE__ */ jsx12("path", { d: "M9.172 12.462a5.02 5.02 0 0 1-5.018-5.018h2a3.02 3.02 0 0 0 3.018 3.018H15a1 1 0 1 1 0 2z" })
+    children: /* @__PURE__ */ jsx17("g", { children: /* @__PURE__ */ jsxs9("g", { fill: "currentColor", fillRule: "evenodd", clipRule: "evenodd", children: [
+      /* @__PURE__ */ jsx17("path", { d: "M8.308 5.148a3.15 3.15 0 0 1-3.154 3.148A3.15 3.15 0 0 1 2 5.148A3.15 3.15 0 0 1 5.154 2a3.15 3.15 0 0 1 3.154 3.148M5.154 6.296a1.15 1.15 0 0 0 1.154-1.148A1.15 1.15 0 0 0 5.154 4A1.15 1.15 0 0 0 4 5.148a1.15 1.15 0 0 0 1.154 1.148M21 18.924a3.15 3.15 0 0 1-3.154 3.147a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.147c1.732 0 3.154 1.4 3.154 3.148m-3.154 1.147A1.15 1.15 0 0 0 19 18.923c0-.633-.517-1.147-1.154-1.147a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.147M21 11.462a3.15 3.15 0 0 1-3.154 3.148a3.15 3.15 0 0 1-3.154-3.148a3.15 3.15 0 0 1 3.154-3.148A3.15 3.15 0 0 1 21 11.462m-3.154 1.148A1.15 1.15 0 0 0 19 11.462c0-.634-.517-1.148-1.154-1.148a1.15 1.15 0 0 0-1.154 1.148a1.15 1.15 0 0 0 1.154 1.148" }),
+      /* @__PURE__ */ jsx17("path", { d: "M5.154 7.018a1 1 0 0 1 1 1v6.784a3.154 3.154 0 0 0 3.13 3.154l5.724.044a1 1 0 0 1-.016 2l-5.724-.044a5.154 5.154 0 0 1-5.114-5.154V8.018a1 1 0 0 1 1-1" }),
+      /* @__PURE__ */ jsx17("path", { d: "M9.172 12.462a5.02 5.02 0 0 1-5.018-5.018h2a3.02 3.02 0 0 0 3.018 3.018H15a1 1 0 1 1 0 2z" })
     ] }) })
   }
 );
@@ -1466,11 +1847,11 @@ function derivePlatformEntry(p) {
 // src/components/timeline/two-column/phase-card/platform-strip.tsx
 import Box9 from "@mui/material/Box";
 import Tooltip from "@mui/material/Tooltip";
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx18 } from "react/jsx-runtime";
 function buildPlatformStripItems(platforms) {
   return platforms.map((p, i) => {
     const { label, icon } = derivePlatformEntry(p);
-    return /* @__PURE__ */ jsx13(Tooltip, { title: label, arrow: true, placement: "top", children: /* @__PURE__ */ jsx13(Box9, { sx: { display: "flex", alignItems: "center", justifyContent: "center" }, children: icon ?? /* @__PURE__ */ jsx13(Box9, { component: "span", sx: { fontSize: 11, px: 0.5 }, children: label }) }) }, `platform-${i}`);
+    return /* @__PURE__ */ jsx18(Tooltip, { title: label, arrow: true, placement: "top", children: /* @__PURE__ */ jsx18(Box9, { sx: { display: "flex", alignItems: "center", justifyContent: "center" }, children: icon ?? /* @__PURE__ */ jsx18(Box9, { component: "span", sx: { fontSize: 11, px: 0.5 }, children: label }) }) }, `platform-${i}`);
   });
 }
 
@@ -1784,10 +2165,10 @@ var PHASE_TASK_ICON_SIZE = 16;
 // src/components/timeline/two-column/phase-card/labeled-icon-strip.tsx
 import Box10 from "@mui/material/Box";
 import Typography6 from "@mui/material/Typography";
-import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx19, jsxs as jsxs10 } from "react/jsx-runtime";
 function LabeledIconStrip({ label, children }) {
-  return /* @__PURE__ */ jsxs9(Box10, { sx: { mt: 2.5 }, children: [
-    label && /* @__PURE__ */ jsx14(Typography6, { variant: "overline", sx: labeledIconStripLabelSx, children: label }),
+  return /* @__PURE__ */ jsxs10(Box10, { sx: { mt: 2.5 }, children: [
+    label && /* @__PURE__ */ jsx19(Typography6, { variant: "overline", sx: labeledIconStripLabelSx, children: label }),
     children
   ] });
 }
@@ -1796,7 +2177,7 @@ function LabeledIconStrip({ label, children }) {
 import Box11 from "@mui/material/Box";
 import Collapse from "@mui/material/Collapse";
 import Typography7 from "@mui/material/Typography";
-import { jsx as jsx15, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx20, jsxs as jsxs11 } from "react/jsx-runtime";
 function CardDetailBullets({
   id,
   details,
@@ -1804,19 +2185,24 @@ function CardDetailBullets({
   taskDoneStates,
   onToggleTask
 }) {
-  return /* @__PURE__ */ jsx15(Collapse, { in: expanded, timeout: 50, children: /* @__PURE__ */ jsx15(Box11, { id, sx: detailBulletsContainerSx, children: details.map((task, i) => {
-    const isDoneTask = taskDoneStates ? taskDoneStates[i] ?? false : task.done ?? false;
+  return /* @__PURE__ */ jsx20(Collapse, { in: expanded, timeout: 50, children: /* @__PURE__ */ jsx20(Box11, { id, sx: detailBulletsContainerSx, children: details.map((task, i) => {
+    const taskKey = String(task.key);
+    const isDoneTask = taskDoneStates ? taskDoneStates[taskKey] ?? taskDoneStates[`idx-${i}`] ?? false : task.done ?? false;
     const toggleLabel = isDoneTask ? `Mark "${task.title}" as not done` : `Mark "${task.title}" as done`;
-    return /* @__PURE__ */ jsxs10(Box11, { sx: taskRowSx, children: [
-      /* @__PURE__ */ jsx15(
+    return /* @__PURE__ */ jsxs11(Box11, { sx: taskRowSx, children: [
+      /* @__PURE__ */ jsx20(
         Box11,
         {
           component: onToggleTask ? "button" : "span",
+          type: onToggleTask ? "button" : void 0,
           "aria-label": onToggleTask ? toggleLabel : void 0,
           "aria-pressed": onToggleTask ? isDoneTask : void 0,
-          onClick: onToggleTask ? () => onToggleTask(i, !isDoneTask) : void 0,
+          onClick: onToggleTask ? (e) => {
+            e.stopPropagation();
+            onToggleTask(i, !isDoneTask);
+          } : void 0,
           sx: onToggleTask ? [taskToggleButtonSx, taskToggleColorSx(isDoneTask)] : [taskIconStaticSx, taskIconColorSx(isDoneTask)],
-          children: /* @__PURE__ */ jsx15(
+          children: /* @__PURE__ */ jsx20(
             GiselleIcon,
             {
               icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
@@ -1825,7 +2211,7 @@ function CardDetailBullets({
           )
         }
       ),
-      /* @__PURE__ */ jsx15(Typography7, { variant: "body2", sx: taskTitleSx(isDoneTask), children: task.title })
+      /* @__PURE__ */ jsx20(Typography7, { variant: "body2", sx: taskTitleSx(isDoneTask), children: task.title })
     ] }, i);
   }) }) });
 }
@@ -1834,7 +2220,7 @@ function CardDetailBullets({
 import Box12 from "@mui/material/Box";
 import Tooltip2 from "@mui/material/Tooltip";
 import Typography8 from "@mui/material/Typography";
-import { jsx as jsx16, jsxs as jsxs11 } from "react/jsx-runtime";
+import { jsx as jsx21, jsxs as jsxs12 } from "react/jsx-runtime";
 function CardCornerAlertBadge({
   alerts,
   columnSide = "right",
@@ -1844,8 +2230,8 @@ function CardCornerAlertBadge({
   if (alerts.length === 0) return null;
   const hasError = alerts.some((a) => a.severity === "error");
   const { left, right, transform, tooltipPlacement } = resolveCornerBadgeAlign(columnSide);
-  const tooltipContent = /* @__PURE__ */ jsx16(Box12, { sx: tooltipAlertListSx, children: alerts.map((a, i) => /* @__PURE__ */ jsxs11(Box12, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: [
-    /* @__PURE__ */ jsx16(
+  const tooltipContent = /* @__PURE__ */ jsx21(Box12, { sx: tooltipAlertListSx, children: alerts.map((a, i) => /* @__PURE__ */ jsxs12(Box12, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: [
+    /* @__PURE__ */ jsx21(
       GiselleIcon,
       {
         icon: "solar:danger-triangle-bold",
@@ -1854,7 +2240,7 @@ function CardCornerAlertBadge({
         style: { flexShrink: 0, marginTop: 2 }
       }
     ),
-    /* @__PURE__ */ jsx16(
+    /* @__PURE__ */ jsx21(
       Typography8,
       {
         variant: "body2",
@@ -1863,7 +2249,7 @@ function CardCornerAlertBadge({
       }
     )
   ] }, i)) });
-  const badgeCircle = /* @__PURE__ */ jsx16(
+  const badgeCircle = /* @__PURE__ */ jsx21(
     Box12,
     {
       ref: innerRef,
@@ -1884,11 +2270,11 @@ function CardCornerAlertBadge({
         hasClickHandler: !!onClick,
         badgeSize: CORNER_ALERT_BADGE_SIZE
       }),
-      children: /* @__PURE__ */ jsx16(GiselleIcon, { icon: "solar:danger-triangle-bold", width: CORNER_ALERT_ICON_SIZE, "aria-hidden": true })
+      children: /* @__PURE__ */ jsx21(GiselleIcon, { icon: "solar:danger-triangle-bold", width: CORNER_ALERT_ICON_SIZE, "aria-hidden": true })
     }
   );
   if (onClick) return badgeCircle;
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx21(
     Tooltip2,
     {
       title: tooltipContent,
@@ -1902,30 +2288,30 @@ function CardCornerAlertBadge({
 
 // src/components/timeline/two-column/phase-card/scenario-badge.tsx
 import Typography9 from "@mui/material/Typography";
-import { jsx as jsx17 } from "react/jsx-runtime";
+import { jsx as jsx22 } from "react/jsx-runtime";
 function ScenarioBadge({ color, scenarioLabel }) {
-  return /* @__PURE__ */ jsx17(Typography9, { variant: "overline", sx: scenarioBadgeSx(color), children: scenarioLabel });
+  return /* @__PURE__ */ jsx22(Typography9, { variant: "overline", sx: scenarioBadgeSx(color), children: scenarioLabel });
 }
 
 // src/components/timeline/two-column/phase-card/card-status-badge.tsx
-import { jsx as jsx18 } from "react/jsx-runtime";
+import { jsx as jsx23 } from "react/jsx-runtime";
 function CardStatusBadge({ color, isScenario, scenarioLabel }) {
   if (!isScenario || !scenarioLabel) return null;
-  return /* @__PURE__ */ jsx18(ScenarioBadge, { color, scenarioLabel });
+  return /* @__PURE__ */ jsx23(ScenarioBadge, { color, scenarioLabel });
 }
 
 // src/components/timeline/two-column/phase-card/card-decoration.tsx
 import Box13 from "@mui/material/Box";
-import { Fragment, jsx as jsx19, jsxs as jsxs12 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx24, jsxs as jsxs13 } from "react/jsx-runtime";
 function CardDecoration({ color, isOverduePending, icon }) {
-  return /* @__PURE__ */ jsxs12(Fragment, { children: [
-    /* @__PURE__ */ jsx19(Box13, { "aria-hidden": true, sx: buildCardDecorationGradientSx(color, isOverduePending) }),
-    /* @__PURE__ */ jsx19(Box13, { "aria-hidden": "true", sx: phaseCardIconBoxSx(color, isOverduePending), children: icon })
+  return /* @__PURE__ */ jsxs13(Fragment2, { children: [
+    /* @__PURE__ */ jsx24(Box13, { "aria-hidden": true, sx: buildCardDecorationGradientSx(color, isOverduePending) }),
+    /* @__PURE__ */ jsx24(Box13, { "aria-hidden": "true", sx: phaseCardIconBoxSx(color, isOverduePending), children: icon })
   ] });
 }
 
 // src/components/timeline/two-column/phase-card/phase-card.tsx
-import { jsx as jsx20, jsxs as jsxs13 } from "react/jsx-runtime";
+import { jsx as jsx25, jsxs as jsxs14 } from "react/jsx-runtime";
 function PhaseCard({
   phase,
   done,
@@ -1946,17 +2332,17 @@ function PhaseCard({
   sx,
   ...other
 }) {
-  const badgeRef = useRef(null);
-  const [popoverOpen, setPopoverOpen] = useState2(false);
-  const handleOpenPopover = useCallback3(() => setPopoverOpen(true), []);
-  const handleClosePopover = useCallback3(() => setPopoverOpen(false), []);
+  const badgeRef = useRef2(null);
+  const [popoverOpen, setPopoverOpen] = useState4(false);
+  const handleOpenPopover = useCallback5(() => setPopoverOpen(true), []);
+  const handleClosePopover = useCallback5(() => setPopoverOpen(false), []);
   const popoverMode = Boolean(onPhasesChange && allPhases);
   const isDone = done ?? phase.done ?? false;
   const isOverdue = overdue ?? phase.overdue ?? false;
-  const [internalExpanded, setInternalExpanded] = useState2(false);
-  const [isHovered, setIsHovered] = useState2(false);
-  const handleMouseEnter = useCallback3(() => setIsHovered(true), []);
-  const handleMouseLeave = useCallback3(() => setIsHovered(false), []);
+  const [internalExpanded, setInternalExpanded] = useState4(false);
+  const [isHovered, setIsHovered] = useState4(false);
+  const handleMouseEnter = useCallback5(() => setIsHovered(true), []);
+  const handleMouseLeave = useCallback5(() => setIsHovered(false), []);
   const taskChildren = resolveTaskChildren2(phase);
   const hasDetails = taskChildren.length > 0;
   const isScenario = phase.variant === "scenario";
@@ -1981,8 +2367,8 @@ function PhaseCard({
       severity: "warning"
     });
   }
-  return /* @__PURE__ */ jsxs13(Box14, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    /* @__PURE__ */ jsx20(
+  return /* @__PURE__ */ jsxs14(Box14, { sx: [{ position: "relative" }, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    /* @__PURE__ */ jsx25(
       CardCornerAlertBadge,
       {
         alerts: cornerAlerts,
@@ -1991,7 +2377,7 @@ function PhaseCard({
         innerRef: popoverMode ? badgeRef : void 0
       }
     ),
-    popoverMode && onPhasesChange && allPhases && /* @__PURE__ */ jsx20(
+    popoverMode && onPhasesChange && allPhases && /* @__PURE__ */ jsx25(
       PhaseWarningPopover,
       {
         open: popoverOpen,
@@ -2002,7 +2388,7 @@ function PhaseCard({
         onPhasesChange
       }
     ),
-    /* @__PURE__ */ jsxs13(
+    /* @__PURE__ */ jsxs14(
       Paper4,
       {
         role: hasDetails ? "button" : void 0,
@@ -2027,7 +2413,7 @@ function PhaseCard({
           })
         ],
         children: [
-          !isHighlighted && !phase.hideDecoration && /* @__PURE__ */ jsx20(
+          !isHighlighted && !phase.hideDecoration && /* @__PURE__ */ jsx25(
             CardDecoration,
             {
               color: phase.color ?? "primary",
@@ -2035,7 +2421,7 @@ function PhaseCard({
               icon: phase.icon
             }
           ),
-          /* @__PURE__ */ jsx20(
+          /* @__PURE__ */ jsx25(
             CardStatusBadge,
             {
               color: phase.color ?? "primary",
@@ -2043,7 +2429,7 @@ function PhaseCard({
               scenarioLabel: phase.scenarioLabel
             }
           ),
-          !phase.hideDate && phase.date && /* @__PURE__ */ jsx20(
+          !phase.hideDate && phase.date && /* @__PURE__ */ jsx25(
             Typography10,
             {
               variant: "subtitle2",
@@ -2056,8 +2442,8 @@ function PhaseCard({
               children: phase.date
             }
           ),
-          /* @__PURE__ */ jsx20(Box14, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: /* @__PURE__ */ jsxs13(Box14, { sx: { flex: 1 }, children: [
-            /* @__PURE__ */ jsx20(
+          /* @__PURE__ */ jsx25(Box14, { sx: { display: "flex", alignItems: "flex-start", gap: 1 }, children: /* @__PURE__ */ jsxs14(Box14, { sx: { flex: 1 }, children: [
+            /* @__PURE__ */ jsx25(
               Typography10,
               {
                 variant: isScenario ? "h6" : "subtitle1",
@@ -2065,14 +2451,14 @@ function PhaseCard({
                 children: displayTitle
               }
             ),
-            hasDetails && /* @__PURE__ */ jsxs13(
+            hasDetails && /* @__PURE__ */ jsxs14(
               Box14,
               {
                 sx: detailCountPillSx,
                 "aria-label": `${taskChildren.length} expandable detail${taskChildren.length === 1 ? "" : "s"}`,
                 children: [
-                  /* @__PURE__ */ jsx20(Box14, { component: "span", sx: pillIconBoxSx(PHASE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
-                  /* @__PURE__ */ jsx20(
+                  /* @__PURE__ */ jsx25(Box14, { component: "span", sx: pillIconBoxSx(PHASE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
+                  /* @__PURE__ */ jsx25(
                     Typography10,
                     {
                       component: "span",
@@ -2084,14 +2470,14 @@ function PhaseCard({
                 ]
               }
             ),
-            expanded && phase.description && /* @__PURE__ */ jsx20(Typography10, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: phase.description }),
-            expanded && resolvePhotoSources(phase)?.map((p, i) => /* @__PURE__ */ jsx20(Box14, { component: "img", src: p.src, alt: p.alt, sx: photoImgSx(i === 0) }, i)),
-            expanded && phase.clients && /* @__PURE__ */ jsx20(LabeledIconStrip, { label: phase.clientsLabel, children: /* @__PURE__ */ jsx20(Box14, { sx: logoStripSx, children: phase.clients.map(({ name, logo }) => /* @__PURE__ */ jsx20(Tooltip3, { title: name, arrow: true, children: /* @__PURE__ */ jsx20(Box14, { component: "img", src: logo, alt: name, sx: clientLogoSx }) }, name)) }) }),
-            expanded && phase.platforms && phase.platforms.length > 0 && /* @__PURE__ */ jsx20(LabeledIconStrip, { label: phase.platformsLabel ?? "Tech Stack", children: /* @__PURE__ */ jsx20(Box14, { sx: platformStripSx, children: buildPlatformStripItems(phase.platforms) }) }),
-            expanded && phase.projects && /* @__PURE__ */ jsx20(LabeledIconStrip, { label: phase.projectsLabel, children: /* @__PURE__ */ jsx20(Box14, { sx: logoStripSx, children: phase.projects.map(({ name, logo }) => /* @__PURE__ */ jsx20(Box14, { component: "img", src: logo, alt: name, sx: projectLogoSx }, name)) }) }),
-            expanded && phase.footer != null && /* @__PURE__ */ jsx20(Box14, { sx: { mt: 1 }, onClick: (e) => e.stopPropagation(), children: phase.footer })
+            expanded && phase.description && /* @__PURE__ */ jsx25(Typography10, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: phase.description }),
+            expanded && resolvePhotoSources(phase)?.map((p, i) => /* @__PURE__ */ jsx25(Box14, { component: "img", src: p.src, alt: p.alt, sx: photoImgSx(i === 0) }, i)),
+            expanded && phase.clients && /* @__PURE__ */ jsx25(LabeledIconStrip, { label: phase.clientsLabel, children: /* @__PURE__ */ jsx25(Box14, { sx: logoStripSx, children: phase.clients.map(({ name, logo }) => /* @__PURE__ */ jsx25(Tooltip3, { title: name, arrow: true, children: /* @__PURE__ */ jsx25(Box14, { component: "img", src: logo, alt: name, sx: clientLogoSx }) }, name)) }) }),
+            expanded && phase.platforms && phase.platforms.length > 0 && /* @__PURE__ */ jsx25(LabeledIconStrip, { label: phase.platformsLabel ?? "Tech Stack", children: /* @__PURE__ */ jsx25(Box14, { sx: platformStripSx, children: buildPlatformStripItems(phase.platforms) }) }),
+            expanded && phase.projects && /* @__PURE__ */ jsx25(LabeledIconStrip, { label: phase.projectsLabel, children: /* @__PURE__ */ jsx25(Box14, { sx: logoStripSx, children: phase.projects.map(({ name, logo }) => /* @__PURE__ */ jsx25(Box14, { component: "img", src: logo, alt: name, sx: projectLogoSx }, name)) }) }),
+            expanded && phase.footer != null && /* @__PURE__ */ jsx25(Box14, { sx: { mt: 1 }, onClick: (e) => e.stopPropagation(), children: phase.footer })
           ] }) }),
-          hasDetails && /* @__PURE__ */ jsx20(
+          hasDetails && /* @__PURE__ */ jsx25(
             CardDetailBullets,
             {
               id: detailsId,
@@ -2104,13 +2490,13 @@ function PhaseCard({
         ]
       }
     ),
-    onMarkViewed && /* @__PURE__ */ jsx20(
+    onMarkViewed && /* @__PURE__ */ jsx25(
       Tooltip3,
       {
         title: isViewed ? "Mark as not viewed" : "Mark as viewed",
         placement: columnSide === "left" ? "right" : "left",
         arrow: true,
-        children: /* @__PURE__ */ jsx20(
+        children: /* @__PURE__ */ jsx25(
           Box14,
           {
             component: "button",
@@ -2122,7 +2508,7 @@ function PhaseCard({
             "aria-label": isViewed ? "Mark as not viewed" : "Mark as viewed",
             "aria-pressed": isViewed,
             sx: eyeButtonSx({ columnSide, isViewed, minSize: EYE_BUTTON_MIN_SIZE }),
-            children: /* @__PURE__ */ jsx20(
+            children: /* @__PURE__ */ jsx25(
               GiselleIcon,
               {
                 icon: isViewed ? "solar:eye-bold" : "solar:eye-outline",
@@ -2137,876 +2523,13 @@ function PhaseCard({
   ] });
 }
 
-// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
-import Box16 from "@mui/material/Box";
-
-// src/components/timeline/two-column/timeline-dot/timeline-dot.styles.ts
-var doneCheckmarkSx = (iconSize) => ({
-  width: iconSize,
-  height: iconSize,
-  flexShrink: 0,
-  animation: `${checkPop} 0.36s cubic-bezier(0.34, 1.56, 0.64, 1)`
-});
-var timelineDotInnerSx = (done, dotBg, effectiveColor, isMilestone, hasClickHandler) => (theme) => ({
-  width: "100%",
-  height: "100%",
-  borderRadius: "50%",
-  overflow: "hidden",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  // All done dots: solid success-green fill with white icon (effectiveColor is already 'success').
-  bgcolor: !done && dotBg ? dotBg : theme.vars.palette[effectiveColor]?.main ?? theme.vars.palette.primary.main,
-  color: theme.vars.palette.common.white,
-  // Milestone: white separator border + colored drop shadow.
-  // boxSizing ensures padding + border are included in the 100%/100% dimensions
-  // so the circle never exceeds the outer 34px container regardless of box model reset.
-  ...isMilestone && {
-    boxSizing: "border-box",
-    padding: "2px",
-    border: "2px solid",
-    borderColor: "background.paper",
-    boxShadow: `0 2px 8px rgba(${theme.vars.palette[effectiveColor]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.5)`
-  },
-  ...hasClickHandler && isMilestone && {
-    "&:hover": {
-      boxShadow: `0 6px 20px rgba(${theme.vars.palette[effectiveColor]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.6)`
-    }
-  }
-});
-var pulseRingAfterSx = (effectiveColor) => ({
-  "&::after": {
-    content: '""',
-    position: "absolute",
-    inset: "-5px",
-    borderRadius: "50%",
-    border: "2px solid",
-    borderColor: `${effectiveColor}.main`,
-    animation: `${pulseRing} 1.5s ease-in-out infinite`
-  }
-});
-
-// src/components/timeline/two-column/timeline-dot/utils.ts
-function resolveEffectiveColor(color, done) {
-  return done ? "success" : color;
-}
-function getDotSize(isMilestone) {
-  return isMilestone ? 34 : 42;
-}
-function getIconSize(isMilestone) {
-  return isMilestone ? 17 : 23;
-}
-function normaliseSx(sx) {
-  if (!sx) return [];
-  return Array.isArray(sx) ? sx : [sx];
-}
-
-// src/components/timeline/two-column/timeline-dot/dot-inner.tsx
-import Box15 from "@mui/material/Box";
-import { jsx as jsx21 } from "react/jsx-runtime";
-function DotInner({ done, icon, animationKey, iconSize }) {
-  if (done) {
-    return /* @__PURE__ */ jsx21(
-      Box15,
-      {
-        component: "svg",
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: 2.8,
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        sx: doneCheckmarkSx(iconSize),
-        children: /* @__PURE__ */ jsx21("polyline", { points: "20 6 9 17 4 12" })
-      },
-      animationKey
-    );
-  }
-  return /* @__PURE__ */ jsx21(
-    Box15,
-    {
-      sx: {
-        display: "flex",
-        animation: animationKey > 0 ? `${checkPop} 0.36s cubic-bezier(0.34, 1.56, 0.64, 1)` : void 0
-      },
-      children: icon
-    },
-    animationKey
-  );
-}
-
-// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
-import { jsx as jsx22 } from "react/jsx-runtime";
-function TimelineDot({
-  icon,
-  color = "primary",
-  size = "phase",
-  active = false,
-  done = false,
-  animationKey = 0,
-  dotBg,
-  onClick,
-  onKeyDown,
-  role,
-  "aria-checked": ariaChecked,
-  "aria-label": ariaLabel,
-  tabIndex,
-  className,
-  sx,
-  ...other
-}) {
-  const isMilestone = size === "milestone";
-  const dotSize = getDotSize(isMilestone);
-  const iconSize = getIconSize(isMilestone);
-  const effectiveColor = resolveEffectiveColor(color, done);
-  return (
-    // Outer Box: controls size, position context, pulsing ::after ring, interaction.
-    // overflow: visible is mandatory — the ring extends 5 px outside via inset: -5
-    // and would be clipped by overflow: hidden.
-    /* @__PURE__ */ jsx22(
-      Box16,
-      {
-        className,
-        role,
-        "aria-checked": ariaChecked,
-        "aria-label": ariaLabel,
-        tabIndex,
-        onClick,
-        onKeyDown,
-        "data-active": active && !isMilestone ? "true" : void 0,
-        ...other,
-        sx: [
-          (theme) => ({
-            position: "relative",
-            width: dotSize,
-            height: dotSize,
-            flexShrink: 0,
-            overflow: "visible",
-            ...onClick && {
-              cursor: "pointer",
-              transition: "opacity 0.2s",
-              "&:hover": { opacity: 0.75 }
-            },
-            ...tabIndex !== void 0 && {
-              "&:focus-visible": {
-                outline: "none",
-                boxShadow: `0 0 0 3px ${theme.vars.palette[effectiveColor]?.main ?? theme.vars.palette.primary.main}`
-              }
-            }
-          }),
-          // Pulsing halo — phase dots only, active state, not done.
-          ...active && !isMilestone && !done ? [pulseRingAfterSx(effectiveColor)] : [],
-          ...normaliseSx(sx)
-        ],
-        children: /* @__PURE__ */ jsx22(Box16, { sx: timelineDotInnerSx(done, dotBg, effectiveColor, isMilestone, !!onClick), children: /* @__PURE__ */ jsx22(DotInner, { done, icon, animationKey, iconSize }) })
-      }
-    )
-  );
-}
-
-// src/components/timeline/two-column/two-column.tsx
-import {
-  useMemo as useMemo4,
-  useState as useState8,
-  useEffect as useEffect3,
-  useCallback as useCallback8,
-  useRef as useRef2,
-  useLayoutEffect
-} from "react";
-import Box28 from "@mui/material/Box";
-import Timeline from "@mui/lab/Timeline";
-
-// src/components/timeline/use-timeline-done-state.ts
-import { useEffect as useEffect2, useState as useState3 } from "react";
-function buildPhaseDoneRecord(phases) {
-  return Object.fromEntries(phases.map((p) => [String(p.key), p.done ?? false]));
-}
-function buildMilestoneDoneRecord(phases, sortFn) {
-  const m = {};
-  phases.forEach((p) => {
-    const sorted = p.milestones ? sortFn([...p.milestones]) : [];
-    sorted.forEach((ms, i) => {
-      m[`${p.key}-${i}`] = ms.done ?? false;
-    });
-  });
-  return m;
-}
-function buildTaskDoneRecord(phases, sortFn) {
-  const t = {};
-  phases.forEach((p) => {
-    const sortedMilestones = p.milestones ? sortFn([...p.milestones]) : [];
-    const childTasks = p.children && p.children.length > 0 ? p.children : sortedMilestones;
-    childTasks.forEach((task, childIndex) => {
-      resolveTaskChildren(task).forEach((nestedTask, taskIndex) => {
-        t[`${p.key}-c${childIndex}-t${taskIndex}`] = nestedTask.done ?? false;
-      });
-    });
-  });
-  return t;
-}
-function useTimelineDoneState(phases, sortOrder) {
-  const sortFn = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
-  const [localPhaseDone, setLocalPhaseDone] = useState3(
-    () => buildPhaseDoneRecord(phases)
-  );
-  const [localMilestoneDone, setLocalMilestoneDone] = useState3(
-    () => buildMilestoneDoneRecord(phases, sortFn)
-  );
-  const [localTaskDoneMap, setLocalTaskDoneMap] = useState3(
-    () => buildTaskDoneRecord(phases, sortFn)
-  );
-  useEffect2(() => {
-    const fn = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
-    setLocalPhaseDone(buildPhaseDoneRecord(phases));
-    setLocalMilestoneDone(buildMilestoneDoneRecord(phases, fn));
-    setLocalTaskDoneMap(buildTaskDoneRecord(phases, fn));
-  }, [phases, sortOrder]);
-  return {
-    localPhaseDone,
-    setLocalPhaseDone,
-    localMilestoneDone,
-    setLocalMilestoneDone,
-    localTaskDoneMap,
-    setLocalTaskDoneMap
-  };
-}
-
-// src/components/timeline/compact/compact.tsx
-import { useCallback as useCallback6, useMemo as useMemo3, useState as useState6 } from "react";
-import Box20 from "@mui/material/Box";
-
-// src/components/timeline/compact/compact.styles.ts
-import { alpha } from "@mui/material/styles";
-
-// src/components/timeline/compact/compact.const.ts
-var COMPACT_PHASE_DOT_SIZE = 32;
-var COMPACT_MILESTONE_DOT_SIZE = 24;
-var COMPACT_PHASE_ICON_SIZE = 18;
-var COMPACT_MILESTONE_ICON_SIZE = 14;
-var COMPACT_MIN_PHASE_DOT_SIZE = 18;
-var COMPACT_MIN_MILESTONE_DOT_SIZE = 18;
-
-// src/components/timeline/compact/compact.styles.ts
-var accordionDetailsSx = {
-  pt: 0,
-  pb: 2,
-  px: 2
-};
-var phaseTitleSx = {
-  flexGrow: 1,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-var dateSx = {
-  color: "text.secondary",
-  flexShrink: 0,
-  ml: 0.5
-};
-var descriptionSx = {
-  color: "text.secondary",
-  mb: 1.5
-};
-var milestonesListSx = {
-  m: 0,
-  p: 0,
-  mt: 1,
-  listStyle: "none"
-};
-var milestoneItemSx = (interactive, done) => ({
-  display: "flex",
-  alignItems: "flex-start",
-  gap: 1.5,
-  cursor: interactive ? "pointer" : "default",
-  borderRadius: 1,
-  opacity: done ? 0.72 : 1,
-  ...interactive ? {
-    "&:hover": {
-      bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.06)
-    }
-  } : null,
-  transition: "background-color 150ms, opacity 150ms",
-  py: 1,
-  px: 0.5
-});
-var milestoneDotColumnSx = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  flexShrink: 0,
-  width: COMPACT_MILESTONE_DOT_SIZE
-};
-var milestoneContentSx = {
-  flexGrow: 1,
-  overflow: "hidden",
-  pb: 0.5
-};
-var milestoneTitleSx = {
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-var milestoneDescriptionPreviewSx = {
-  color: "text.secondary",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  mt: 0.25
-};
-var milestoneDateSx = {
-  color: "text.secondary",
-  flexShrink: 0,
-  mt: 0.25
-};
-var phaseDotSx = (color) => (theme) => ({
-  width: COMPACT_PHASE_DOT_SIZE,
-  height: COMPACT_PHASE_DOT_SIZE,
-  borderRadius: "50%",
-  flexShrink: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  bgcolor: theme.vars?.palette[color].main ?? theme.palette[color].main,
-  color: "common.white"
-});
-var milestoneDotSx = (color) => (theme) => ({
-  width: COMPACT_MILESTONE_DOT_SIZE,
-  height: COMPACT_MILESTONE_DOT_SIZE,
-  borderRadius: "50%",
-  flexShrink: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  bgcolor: theme.vars?.palette[color].main ?? theme.palette[color].main,
-  color: "common.white"
-});
-var milestoneConnectorLineSx = {
-  width: 2,
-  flexGrow: 1,
-  minHeight: 16,
-  bgcolor: "divider",
-  mt: 0.5
-};
-var accordionRootSx = (done, active = false, expanded = false, color = "primary") => (theme) => {
-  const neutralColor = typeof theme.palette.grey?.[500] === "string" ? theme.palette.grey[500] : "#919eab";
-  const activeColor = theme.palette[color].main;
-  const neutralBg = alpha(neutralColor, 0.08);
-  const activeBg = alpha(activeColor, 0.12);
-  const activeBorder = alpha(activeColor, 0.24);
-  const isActiveExpanded = active && expanded;
-  const transitionDuration = theme.transitions?.duration?.shorter ?? 250;
-  const colorTransition = theme.transitions?.create ? theme.transitions.create(["background-color", "border-color"], {
-    duration: transitionDuration
-  }) : "background-color 250ms, border-color 250ms";
-  return {
-    py: 1,
-    px: 2.5,
-    border: isActiveExpanded ? `1px solid ${activeBorder}` : "none",
-    borderRadius: 2,
-    boxShadow: "none",
-    backgroundColor: isActiveExpanded ? activeBg : "transparent",
-    "&:before": { display: "none" },
-    "&.Mui-expanded": {
-      margin: 0,
-      bgcolor: isActiveExpanded ? activeBg : neutralBg,
-      border: isActiveExpanded ? `1px solid ${activeBorder}` : "none"
-    },
-    "&:hover": {
-      bgcolor: neutralBg
-    },
-    opacity: done ? 0.65 : 1,
-    transition: `${colorTransition}, opacity 300ms`
-  };
-};
-
-// src/components/timeline/compact/phase-accordion-row.tsx
-import { useCallback as useCallback5, useState as useState5 } from "react";
-import Box19 from "@mui/material/Box";
-import SvgIcon2 from "@mui/material/SvgIcon";
-import Typography14 from "@mui/material/Typography";
-
-// src/utils/use-nested-checklist.ts
-import { useCallback as useCallback4, useMemo as useMemo2, useState as useState4 } from "react";
-function useNestedChecklist(initialParentDone, initialChildrenDone) {
-  const [parentDone, setParentDone] = useState4(initialParentDone);
-  const [childrenDone, setChildrenDone] = useState4(initialChildrenDone);
-  const indeterminate = useMemo2(
-    () => childrenDone.some(Boolean) && !childrenDone.every(Boolean),
-    [childrenDone]
-  );
-  const toggleParent = useCallback4(() => {
-    const next = !parentDone;
-    setParentDone(next);
-    setChildrenDone((prev) => prev.map(() => next));
-  }, [parentDone]);
-  const toggleChild = useCallback4((index) => {
-    setChildrenDone((prev) => {
-      const next = prev.map((v, i) => i === index ? !v : v);
-      setParentDone(next.every(Boolean));
-      return next;
-    });
-  }, []);
-  return { parentDone, indeterminate, childrenDone, toggleParent, toggleChild };
-}
-
-// src/components/timeline/compact/chevron-down-icon.tsx
-import { jsx as jsx23 } from "react/jsx-runtime";
-function ChevronDownIcon() {
-  return /* @__PURE__ */ jsx23(
-    "svg",
-    {
-      width: "16",
-      height: "16",
-      viewBox: "0 0 24 24",
-      fill: "currentColor",
-      "aria-hidden": "true",
-      focusable: "false",
-      children: /* @__PURE__ */ jsx23("path", { d: "M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" })
-    }
-  );
-}
-
-// src/components/timeline/compact/milestone-modal.tsx
-import Dialog from "@mui/material/Dialog";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Divider2 from "@mui/material/Divider";
-import IconButton3 from "@mui/material/IconButton";
-import Typography13 from "@mui/material/Typography";
-import useMediaQuery from "@mui/material/useMediaQuery";
-
-// src/components/timeline/compact/milestone-modal.styles.ts
-var dialogTitleSx = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 1,
-  pr: 1
-};
-var dialogDateSx = {
-  color: "text.secondary",
-  mt: 0.25
-};
-
-// src/components/timeline/compact/task-details-renderer.tsx
-import Box18 from "@mui/material/Box";
-import Typography12 from "@mui/material/Typography";
-
-// src/components/timeline/task-list/task-list.tsx
-import Checkbox2 from "@mui/material/Checkbox";
-import Box17 from "@mui/material/Box";
-import Typography11 from "@mui/material/Typography";
-
-// src/components/timeline/task-list/task-list.styles.ts
-var taskListBaseSx = {
-  mt: 0,
-  mb: 1.5,
-  pl: 2,
-  color: "text.secondary",
-  listStyle: "none"
-};
-var taskListMilestoneSx = {
-  mt: 0,
-  mb: 1.5,
-  pl: 3,
-  color: "text.secondary",
-  listStyle: "none"
-};
-var taskItemSx = {
-  display: "flex",
-  alignItems: "center",
-  mb: 0.25
-};
-var taskCheckboxSx = {
-  p: 0.5,
-  mr: 0.5
-};
-var taskCaptionSx = (isDone) => () => ({
-  color: "text.secondary",
-  textDecoration: isDone ? "line-through" : "none"
-});
-
-// src/components/timeline/task-list/task-list.tsx
-import { jsx as jsx24, jsxs as jsxs14 } from "react/jsx-runtime";
-function TaskList({
-  tasks,
-  checklist = false,
-  taskDoneState,
-  onTaskToggle,
-  indent = "phase",
-  sx,
-  ...other
-}) {
-  const listSx = indent === "milestone" ? taskListMilestoneSx : taskListBaseSx;
-  return /* @__PURE__ */ jsx24(Box17, { component: "ul", sx: [listSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: tasks.map((task, i) => {
-    const isDone = taskDoneState?.[i] ?? task.done ?? false;
-    return /* @__PURE__ */ jsxs14(Box17, { component: "li", sx: taskItemSx, children: [
-      checklist && /* @__PURE__ */ jsx24(
-        Checkbox2,
-        {
-          size: "small",
-          checked: isDone,
-          onChange: () => onTaskToggle?.(i),
-          sx: taskCheckboxSx,
-          slotProps: { input: { "aria-label": task.title } }
-        }
-      ),
-      /* @__PURE__ */ jsx24(Typography11, { variant: "caption", sx: taskCaptionSx(isDone), children: task.title })
-    ] }, i);
-  }) });
-}
-
-// src/components/timeline/compact/task-details-renderer.styles.ts
-var taskDetailsSummarySx = {
-  color: "text.secondary",
-  mb: 2
-};
-var taskDetailsContentSx = {
-  display: "grid",
-  gap: 2
-};
-var taskDetailsEmptyStateSx = {
-  color: "text.disabled"
-};
-
-// src/components/timeline/compact/utils.ts
-function resolveCompactColor(color, done) {
-  if (done) return "success";
-  if (!color || color === "inherit" || color === "grey") return "primary";
-  return color;
-}
-
-// src/components/timeline/compact/task-details-renderer.tsx
-import { jsx as jsx25, jsxs as jsxs15 } from "react/jsx-runtime";
-function renderDetailsNode(node) {
-  if (!node) return null;
-  if (typeof node === "string") {
-    return /* @__PURE__ */ jsx25(Typography12, { variant: "body2", sx: taskDetailsSummarySx, children: node });
-  }
-  return node;
-}
-function TaskDetailsRenderer({
-  task,
-  checklist = false,
-  taskDoneState,
-  onTaskToggle,
-  emptyState = "No additional details.",
-  sx,
-  ...other
-}) {
-  const nestedTasks = resolveTaskChildren(task);
-  const hasInlineDescription = Boolean(task.description);
-  const hasSummary = Boolean(task.details?.summary);
-  const hasContent = Boolean(task.details?.content);
-  const hasTasks = nestedTasks.length > 0;
-  return /* @__PURE__ */ jsxs15(Box18, { sx: [taskDetailsContentSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    hasInlineDescription && /* @__PURE__ */ jsx25(Typography12, { variant: "body2", sx: taskDetailsSummarySx, children: task.description }),
-    !hasInlineDescription && renderDetailsNode(task.details?.summary),
-    hasContent && renderDetailsNode(task.details?.content),
-    hasTasks && /* @__PURE__ */ jsx25(
-      TaskList,
-      {
-        tasks: nestedTasks,
-        checklist,
-        taskDoneState,
-        onTaskToggle,
-        indent: "milestone"
-      }
-    ),
-    !hasInlineDescription && !hasSummary && !hasContent && !hasTasks && /* @__PURE__ */ jsx25(Typography12, { variant: "body2", sx: taskDetailsEmptyStateSx, children: emptyState })
-  ] });
-}
-
-// src/components/timeline/compact/milestone-modal.tsx
-import { jsx as jsx26, jsxs as jsxs16 } from "react/jsx-runtime";
-function TaskDetailsModal({
-  task,
-  open,
-  onClose,
-  checklist = false,
-  taskDoneState,
-  onTaskToggle
-}) {
-  const fullScreen = useMediaQuery("(max-width:599.95px)");
-  if (!task) return null;
-  return /* @__PURE__ */ jsxs16(
-    Dialog,
-    {
-      open,
-      onClose,
-      fullWidth: true,
-      maxWidth: "sm",
-      fullScreen,
-      scroll: "paper",
-      children: [
-        /* @__PURE__ */ jsxs16(DialogTitle, { sx: dialogTitleSx, children: [
-          /* @__PURE__ */ jsxs16("div", { children: [
-            /* @__PURE__ */ jsx26(Typography13, { variant: "h6", component: "span", children: task.title }),
-            task.date && /* @__PURE__ */ jsx26(Typography13, { variant: "caption", display: "block", sx: dialogDateSx, children: task.date })
-          ] }),
-          /* @__PURE__ */ jsx26(IconButton3, { "aria-label": "Close details", onClick: onClose, sx: { mt: 0.5, flexShrink: 0 }, children: /* @__PURE__ */ jsx26("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ jsx26("path", { d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" }) }) })
-        ] }),
-        /* @__PURE__ */ jsx26(Divider2, {}),
-        /* @__PURE__ */ jsx26(DialogContent, { sx: { pt: 2 }, children: /* @__PURE__ */ jsx26(
-          TaskDetailsRenderer,
-          {
-            task,
-            checklist,
-            taskDoneState,
-            onTaskToggle
-          }
-        ) })
-      ]
-    }
-  );
-}
-
-// src/components/timeline/compact/phase-accordion-row.tsx
-import { Fragment as Fragment2, jsx as jsx27, jsxs as jsxs17 } from "react/jsx-runtime";
-var CHECK_DONE_DOT = /* @__PURE__ */ jsx27(Box19, { sx: phaseDotSx("success"), "aria-hidden": "true", children: /* @__PURE__ */ jsx27(
-  "svg",
-  {
-    width: COMPACT_PHASE_ICON_SIZE,
-    height: COMPACT_PHASE_ICON_SIZE,
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    "aria-hidden": "true",
-    children: /* @__PURE__ */ jsx27("path", { d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" })
-  }
-) });
-var CHECK_HOVER_DOT = /* @__PURE__ */ jsx27(SvgIcon2, { sx: { color: "success.main", fontSize: COMPACT_PHASE_DOT_SIZE }, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx27("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
-var MS_CHECK_DONE_DOT = /* @__PURE__ */ jsx27(
-  Box19,
-  {
-    sx: phaseDotSx("success"),
-    style: { width: COMPACT_MILESTONE_DOT_SIZE, height: COMPACT_MILESTONE_DOT_SIZE, flexShrink: 0 },
-    "aria-hidden": "true",
-    children: /* @__PURE__ */ jsx27(
-      "svg",
-      {
-        width: COMPACT_MILESTONE_ICON_SIZE,
-        height: COMPACT_MILESTONE_ICON_SIZE,
-        viewBox: "0 0 24 24",
-        fill: "currentColor",
-        "aria-hidden": "true",
-        children: /* @__PURE__ */ jsx27("path", { d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" })
-      }
-    )
-  }
-);
-var MS_CHECK_HOVER_DOT = /* @__PURE__ */ jsx27(SvgIcon2, { sx: { color: "success.main", fontSize: COMPACT_MILESTONE_DOT_SIZE }, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx27("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
-var accordionSummaryOverrideSx = {
-  "& .MuiAccordionSummary-root": { minHeight: 56 },
-  "& .MuiAccordionSummary-root.Mui-expanded": { minHeight: 56 },
-  "& .MuiAccordionSummary-content": { display: "flex", alignItems: "center", gap: 1.5 },
-  "& .MuiAccordionSummary-expandIconWrapper": {
-    color: "text.secondary",
-    display: "flex",
-    alignItems: "center",
-    alignSelf: "center"
-  }
-};
-function PhaseAccordionRow({
-  phase,
-  sortedMilestones,
-  checklist,
-  taskDoneMap,
-  onTaskToggle,
-  onMarkViewed,
-  onTogglePhaseDone,
-  onToggleMilestoneDone,
-  expandedPhaseKey,
-  onToggleExpanded
-}) {
-  const { parentDone, indeterminate, childrenDone, toggleParent, toggleChild } = useNestedChecklist(
-    phase.done ?? false,
-    sortedMilestones.map((ms) => ms.done ?? false)
-  );
-  const [modalTask, setModalTask] = useState5(null);
-  const effectiveColor = resolveCompactColor(phase.color, parentDone);
-  const childTasks = phase.children && phase.children.length > 0 ? phase.children : sortedMilestones;
-  const usesMilestoneChildren = !(phase.children && phase.children.length > 0);
-  const hasDetails = Boolean(phase.description) || childTasks.length > 0;
-  const handleToggleParent = useCallback5(() => {
-    toggleParent();
-    onTogglePhaseDone?.(phase.key, !parentDone);
-  }, [toggleParent, onTogglePhaseDone, phase.key, parentDone]);
-  const handleAccordionChange = useCallback5(
-    (_e, expanded) => {
-      onToggleExpanded(phase.key);
-      if (expanded) onMarkViewed?.(`phase-${phase.key}`);
-    },
-    [onMarkViewed, onToggleExpanded, phase.key]
-  );
-  const phaseDot = /* @__PURE__ */ jsx27(Box19, { sx: phaseDotSx(effectiveColor), "aria-hidden": "true", children: phase.icon });
-  const leadingAction = checklist ? void 0 : phaseDot;
-  const checkIcon = checklist ? phaseDot : void 0;
-  const checkDoneIcon = checklist ? CHECK_DONE_DOT : void 0;
-  const checkHoverIcon = checklist ? CHECK_HOVER_DOT : void 0;
-  const titleContent = /* @__PURE__ */ jsx27(Typography14, { variant: "subtitle2", sx: phaseTitleSx, children: phase.shortTitle ?? phase.title });
-  const dateLabel = phase.date ? /* @__PURE__ */ jsx27(Typography14, { variant: "caption", sx: dateSx, children: phase.date }) : null;
-  const isExpanded = expandedPhaseKey === phase.key;
-  return /* @__PURE__ */ jsxs17(Fragment2, { children: [
-    /* @__PURE__ */ jsx27(
-      Accordion,
-      {
-        disableGutters: true,
-        elevation: 0,
-        checklist,
-        checkIcon,
-        checkDoneIcon,
-        checkHoverIcon,
-        leadingAction,
-        done: parentDone,
-        indeterminate,
-        onDoneButtonClick: handleToggleParent,
-        trailingContent: dateLabel,
-        expandIcon: hasDetails ? /* @__PURE__ */ jsx27(ChevronDownIcon, {}) : null,
-        title: titleContent,
-        expanded: isExpanded,
-        onChange: handleAccordionChange,
-        sx: [
-          accordionRootSx(parentDone, Boolean(phase.active), isExpanded, effectiveColor),
-          accordionSummaryOverrideSx
-        ],
-        children: hasDetails && /* @__PURE__ */ jsxs17(Box19, { sx: accordionDetailsSx, children: [
-          phase.description && /* @__PURE__ */ jsx27(Typography14, { variant: "body2", sx: descriptionSx, children: phase.description }),
-          childTasks.length > 0 && /* @__PURE__ */ jsx27(Box19, { component: "ul", sx: milestonesListSx, children: childTasks.map((task, idx) => {
-            const isDone = usesMilestoneChildren ? childrenDone[idx] ?? false : task.done ?? false;
-            const idleDotColor = resolveCompactColor(task.color ?? phase.color, isDone);
-            const isLast = idx === childTasks.length - 1;
-            const nestedTasks = resolveTaskChildren(task);
-            const canOpen = Boolean(task.description) || Boolean(task.details?.summary) || Boolean(task.details?.content) || nestedTasks.length > 0;
-            const dotNode = /* @__PURE__ */ jsx27(Box19, { sx: milestoneDotSx(idleDotColor), "aria-hidden": "true", children: task.icon });
-            const rowButtonProps = canOpen ? {
-              onClick: () => setModalTask({ task, idx }),
-              role: "button",
-              tabIndex: 0,
-              "aria-label": `View details: ${task.title}`,
-              onKeyDown: (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setModalTask({ task, idx });
-                }
-              }
-            } : {};
-            return /* @__PURE__ */ jsxs17(
-              Box19,
-              {
-                component: "li",
-                sx: milestoneItemSx(canOpen, isDone),
-                ...rowButtonProps,
-                children: [
-                  /* @__PURE__ */ jsxs17(Box19, { sx: milestoneDotColumnSx, children: [
-                    checklist && usesMilestoneChildren ? /* @__PURE__ */ jsx27(
-                      CheckIconButton,
-                      {
-                        done: isDone,
-                        checkIcon: dotNode,
-                        checkDoneIcon: MS_CHECK_DONE_DOT,
-                        checkHoverIcon: MS_CHECK_HOVER_DOT,
-                        onDoneButtonClick: (newDone) => {
-                          toggleChild(idx);
-                          onToggleMilestoneDone?.(phase.key, idx, newDone);
-                        }
-                      }
-                    ) : dotNode,
-                    !isLast && /* @__PURE__ */ jsx27(Box19, { "aria-hidden": "true", sx: milestoneConnectorLineSx })
-                  ] }),
-                  /* @__PURE__ */ jsxs17(Box19, { sx: milestoneContentSx, children: [
-                    /* @__PURE__ */ jsx27(Typography14, { variant: "subtitle2", sx: milestoneTitleSx, children: task.shortTitle ?? task.title }),
-                    task.description && /* @__PURE__ */ jsx27(Typography14, { variant: "body2", sx: milestoneDescriptionPreviewSx, children: task.description })
-                  ] }),
-                  task.date && /* @__PURE__ */ jsx27(Typography14, { variant: "caption", sx: milestoneDateSx, children: task.date })
-                ]
-              },
-              `${phase.key}-child-${task.key}`
-            );
-          }) })
-        ] })
-      }
-    ),
-    /* @__PURE__ */ jsx27(
-      TaskDetailsModal,
-      {
-        task: modalTask?.task ?? null,
-        open: modalTask !== null,
-        onClose: () => setModalTask(null),
-        checklist,
-        taskDoneState: modalTask ? resolveTaskChildren(modalTask.task).map(
-          (task, i) => taskDoneMap[`${phase.key}-c${modalTask.idx}-t${i}`] ?? task.done ?? false
-        ) : void 0,
-        onTaskToggle: modalTask ? (i) => onTaskToggle(phase.key, modalTask.idx, i) : void 0
-      }
-    )
-  ] });
-}
-
-// src/components/timeline/compact/compact.tsx
-import { jsx as jsx28 } from "react/jsx-runtime";
-function TimelineCompact({
-  phases,
-  checklist = false,
-  sortOrder = "desc",
-  viewedKeys: _viewedKeys,
-  onMarkViewed,
-  onTogglePhaseDone,
-  onToggleMilestoneDone,
-  onToggleTaskDone,
-  sx,
-  ...other
-}) {
-  const sortMilestones = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
-  const sorted = useMemo3(() => sortPhasesByDate(phases, sortOrder), [phases, sortOrder]);
-  const { localTaskDoneMap, setLocalTaskDoneMap } = useTimelineDoneState(phases, sortOrder);
-  const handleTaskToggle = useCallback6(
-    (phaseKey, childIdx, taskIdx) => {
-      const k = childIdx === null ? `${phaseKey}-t${taskIdx}` : `${phaseKey}-c${childIdx}-t${taskIdx}`;
-      const next = !(localTaskDoneMap[k] ?? false);
-      setLocalTaskDoneMap((prev) => ({ ...prev, [k]: next }));
-      onToggleTaskDone?.(phaseKey, childIdx, taskIdx, next);
-    },
-    [localTaskDoneMap, onToggleTaskDone, setLocalTaskDoneMap]
-  );
-  const [expandedPhaseKey, setExpandedPhaseKey] = useState6(null);
-  const handleToggleExpanded = useCallback6((key) => {
-    setExpandedPhaseKey((prev) => prev === key ? null : key);
-  }, []);
-  return /* @__PURE__ */ jsx28(Box20, { sx: [accordionRootSx(false), ...Array.isArray(sx) ? sx : [sx]], ...other, children: sorted.map((phase) => {
-    const sortedMilestones = phase.milestones ? sortMilestones([...phase.milestones]) : [];
-    return /* @__PURE__ */ jsx28(
-      PhaseAccordionRow,
-      {
-        phase,
-        sortedMilestones,
-        checklist,
-        taskDoneMap: localTaskDoneMap,
-        onTaskToggle: handleTaskToggle,
-        onMarkViewed,
-        onTogglePhaseDone,
-        onToggleMilestoneDone,
-        expandedPhaseKey,
-        onToggleExpanded: handleToggleExpanded
-      },
-      phase.key
-    );
-  }) });
-}
-
-// src/components/timeline/two-column/milestone-row.tsx
-import Box22 from "@mui/material/Box";
-import Tooltip5 from "@mui/material/Tooltip";
-import Typography16 from "@mui/material/Typography";
-
 // src/components/timeline/two-column/milestone-badge/milestone-badge.tsx
-import { useCallback as useCallback7, useState as useState7 } from "react";
-import Box21 from "@mui/material/Box";
+import { useCallback as useCallback6, useState as useState5 } from "react";
+import Box15 from "@mui/material/Box";
 import Paper5 from "@mui/material/Paper";
 import Collapse2 from "@mui/material/Collapse";
 import Tooltip4 from "@mui/material/Tooltip";
-import Typography15 from "@mui/material/Typography";
+import Typography11 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/milestone-badge/milestone-badge.styles.ts
 var pillIconBoxSx2 = (iconSize) => ({
@@ -3034,7 +2557,7 @@ var milestoneNewLabelSx = {
   color: "success.main",
   lineHeight: 1
 };
-var milestoneDateSx2 = (fontSize = "0.875rem") => ({
+var milestoneDateSx = (fontSize = "0.875rem") => ({
   color: "text.secondary",
   fontSize,
   display: "block",
@@ -3170,7 +2693,7 @@ var MILESTONE_EYE_BUTTON_MIN_SIZE = 28;
 var MILESTONE_TASK_ICON_SIZE = 16;
 
 // src/components/timeline/two-column/milestone-badge/milestone-badge.tsx
-import { jsx as jsx29, jsxs as jsxs18 } from "react/jsx-runtime";
+import { jsx as jsx26, jsxs as jsxs15 } from "react/jsx-runtime";
 function MilestoneBadge({
   milestone: m,
   done = false,
@@ -3196,14 +2719,14 @@ function MilestoneBadge({
   const colorKey = m.color ?? "primary";
   const titleSlug = String(m.title).replace(/[^a-z0-9]/gi, "-").toLowerCase();
   const detailsId = stableId ? `ms-details-${stableId}` : `ms-details-${titleSlug}`;
-  const [isHovered, setIsHovered] = useState7(false);
-  const handleMouseEnter = useCallback7(() => setIsHovered(true), []);
-  const handleMouseLeave = useCallback7(() => setIsHovered(false), []);
+  const [isHovered, setIsHovered] = useState5(false);
+  const handleMouseEnter = useCallback6(() => setIsHovered(true), []);
+  const handleMouseLeave = useCallback6(() => setIsHovered(false), []);
   const displayTitle = isExpanded || isHovered ? m.title : m.shortTitle ?? m.title;
-  const handleClick = useCallback7(() => {
+  const handleClick = useCallback6(() => {
     if (hasDetails) onRequestExpand();
   }, [hasDetails, onRequestExpand]);
-  const handleKeyDown = useCallback7(
+  const handleKeyDown = useCallback6(
     (e) => {
       if (hasDetails && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
@@ -3212,7 +2735,7 @@ function MilestoneBadge({
     },
     [hasDetails, onRequestExpand]
   );
-  return /* @__PURE__ */ jsxs18(
+  return /* @__PURE__ */ jsxs15(
     Paper5,
     {
       ...other,
@@ -3229,20 +2752,20 @@ function MilestoneBadge({
         ...Array.isArray(sx) ? sx : [sx]
       ],
       children: [
-        m.new && /* @__PURE__ */ jsxs18(Box21, { sx: milestoneNewBadgeRowSx(rightAlign), children: [
-          /* @__PURE__ */ jsx29(Box21, { sx: milestoneNewDotSx }),
-          /* @__PURE__ */ jsx29(Typography15, { variant: "caption", sx: milestoneNewLabelSx, children: "New" })
+        m.new && /* @__PURE__ */ jsxs15(Box15, { sx: milestoneNewBadgeRowSx(rightAlign), children: [
+          /* @__PURE__ */ jsx26(Box15, { sx: milestoneNewDotSx }),
+          /* @__PURE__ */ jsx26(Typography11, { variant: "caption", sx: milestoneNewLabelSx, children: "New" })
         ] }),
-        m.date && /* @__PURE__ */ jsx29(Typography15, { variant: "caption", sx: milestoneDateSx2(MILESTONE_DATE_FONT_SIZE), children: m.date }),
-        /* @__PURE__ */ jsxs18(Box21, { sx: milestoneTitleRowSx(rightAlign), children: [
-          onMarkViewed && /* @__PURE__ */ jsx29(
+        m.date && /* @__PURE__ */ jsx26(Typography11, { variant: "caption", sx: milestoneDateSx(MILESTONE_DATE_FONT_SIZE), children: m.date }),
+        /* @__PURE__ */ jsxs15(Box15, { sx: milestoneTitleRowSx(rightAlign), children: [
+          onMarkViewed && /* @__PURE__ */ jsx26(
             Tooltip4,
             {
               title: isViewed ? "Mark as not viewed" : "Mark as viewed",
               placement: rightAlign ? "right" : "left",
               arrow: true,
-              children: /* @__PURE__ */ jsx29(
-                Box21,
+              children: /* @__PURE__ */ jsx26(
+                Box15,
                 {
                   component: "button",
                   type: "button",
@@ -3256,7 +2779,7 @@ function MilestoneBadge({
                     isViewed: !!isViewed,
                     minSize: MILESTONE_EYE_BUTTON_MIN_SIZE
                   }),
-                  children: /* @__PURE__ */ jsx29(
+                  children: /* @__PURE__ */ jsx26(
                     GiselleIcon,
                     {
                       icon: isViewed ? "solar:eye-bold" : "solar:eye-outline",
@@ -3268,18 +2791,18 @@ function MilestoneBadge({
               )
             }
           ),
-          /* @__PURE__ */ jsx29(Typography15, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle })
+          /* @__PURE__ */ jsx26(Typography11, { variant: "subtitle2", sx: { fontWeight: 700, lineHeight: 1.3 }, children: displayTitle })
         ] }),
-        (isExpanded || isHovered) && m.description && /* @__PURE__ */ jsx29(Typography15, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: m.description }),
-        hasDetails && /* @__PURE__ */ jsxs18(
-          Box21,
+        (isExpanded || isHovered) && m.description && /* @__PURE__ */ jsx26(Typography11, { variant: "body2", sx: { color: "text.secondary", mt: 0.5 }, children: m.description }),
+        hasDetails && /* @__PURE__ */ jsxs15(
+          Box15,
           {
             sx: milestoneDetailPillSx,
             "aria-label": `${taskChildren.length} expandable detail${taskChildren.length === 1 ? "" : "s"}`,
             children: [
-              /* @__PURE__ */ jsx29(Box21, { component: "span", sx: pillIconBoxSx2(MILESTONE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
-              /* @__PURE__ */ jsx29(
-                Typography15,
+              /* @__PURE__ */ jsx26(Box15, { component: "span", sx: pillIconBoxSx2(MILESTONE_PILL_ICON_SIZE), children: expandableIcon ?? DEFAULT_EXPANDABLE_ICON }),
+              /* @__PURE__ */ jsx26(
+                Typography11,
                 {
                   component: "span",
                   variant: "caption",
@@ -3290,19 +2813,24 @@ function MilestoneBadge({
             ]
           }
         ),
-        hasDetails && /* @__PURE__ */ jsx29(Collapse2, { in: isExpanded, timeout: 50, children: /* @__PURE__ */ jsx29(Box21, { id: detailsId, sx: milestoneDetailListSx, children: taskChildren.map((task, i) => {
-          const isDoneTask = taskDoneStates ? taskDoneStates[i] ?? false : task.done ?? false;
+        hasDetails && /* @__PURE__ */ jsx26(Collapse2, { in: isExpanded, timeout: 50, children: /* @__PURE__ */ jsx26(Box15, { id: detailsId, sx: milestoneDetailListSx, children: taskChildren.map((task, i) => {
+          const taskKey = String(task.key);
+          const isDoneTask = taskDoneStates ? taskDoneStates[taskKey] ?? taskDoneStates[`idx-${i}`] ?? false : task.done ?? false;
           const toggleLabel = isDoneTask ? `Mark "${task.title}" as not done` : `Mark "${task.title}" as done`;
-          return /* @__PURE__ */ jsxs18(Box21, { sx: taskRowSx2, children: [
-            /* @__PURE__ */ jsx29(
-              Box21,
+          return /* @__PURE__ */ jsxs15(Box15, { sx: taskRowSx2, children: [
+            /* @__PURE__ */ jsx26(
+              Box15,
               {
                 component: onToggleTask ? "button" : "span",
+                type: onToggleTask ? "button" : void 0,
                 "aria-label": onToggleTask ? toggleLabel : void 0,
                 "aria-pressed": onToggleTask ? isDoneTask : void 0,
-                onClick: onToggleTask ? () => onToggleTask(i, !isDoneTask) : void 0,
+                onClick: onToggleTask ? (e) => {
+                  e.stopPropagation();
+                  onToggleTask(i, !isDoneTask);
+                } : void 0,
                 sx: onToggleTask ? [taskToggleButtonSx2, taskToggleColorSx2(isDoneTask)] : [taskIconStaticSx2, taskIconColorSx2(isDoneTask)],
-                children: /* @__PURE__ */ jsx29(
+                children: /* @__PURE__ */ jsx26(
                   GiselleIcon,
                   {
                     icon: isDoneTask ? "solar:check-circle-bold" : "solar:record-minimalistic-outline",
@@ -3311,13 +2839,877 @@ function MilestoneBadge({
                 )
               }
             ),
-            /* @__PURE__ */ jsx29(Typography15, { variant: "body2", sx: taskTitleSx2(isDoneTask), children: task.title })
+            /* @__PURE__ */ jsx26(Typography11, { variant: "body2", sx: taskTitleSx2(isDoneTask), children: task.title })
           ] }, i);
         }) }) })
       ]
     }
   );
 }
+
+// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
+import Box17 from "@mui/material/Box";
+
+// src/components/timeline/two-column/timeline-dot/timeline-dot.styles.ts
+var doneCheckmarkSx = (iconSize) => ({
+  width: iconSize,
+  height: iconSize,
+  flexShrink: 0,
+  animation: `${checkPop} 0.36s cubic-bezier(0.34, 1.56, 0.64, 1)`
+});
+var timelineDotInnerSx = (done, dotBg, effectiveColor, isMilestone, hasClickHandler) => (theme) => ({
+  width: "100%",
+  height: "100%",
+  borderRadius: "50%",
+  overflow: "hidden",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  // All done dots: solid success-green fill with white icon (effectiveColor is already 'success').
+  bgcolor: !done && dotBg ? dotBg : theme.vars.palette[effectiveColor]?.main ?? theme.vars.palette.primary.main,
+  color: theme.vars.palette.common.white,
+  // Milestone: white separator border + colored drop shadow.
+  // boxSizing ensures padding + border are included in the 100%/100% dimensions
+  // so the circle never exceeds the outer 34px container regardless of box model reset.
+  ...isMilestone && {
+    boxSizing: "border-box",
+    padding: "2px",
+    border: "2px solid",
+    borderColor: "background.paper",
+    boxShadow: `0 2px 8px rgba(${theme.vars.palette[effectiveColor]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.5)`
+  },
+  ...hasClickHandler && isMilestone && {
+    "&:hover": {
+      boxShadow: `0 6px 20px rgba(${theme.vars.palette[effectiveColor]?.mainChannel ?? theme.vars.palette.grey["500Channel"]} / 0.6)`
+    }
+  }
+});
+var pulseRingAfterSx = (effectiveColor) => ({
+  "&::after": {
+    content: '""',
+    position: "absolute",
+    inset: "-5px",
+    borderRadius: "50%",
+    border: "2px solid",
+    borderColor: `${effectiveColor}.main`,
+    animation: `${pulseRing} 1.5s ease-in-out infinite`
+  }
+});
+
+// src/components/timeline/two-column/timeline-dot/utils.ts
+function resolveEffectiveColor(color, done) {
+  return done ? "success" : color;
+}
+function getDotSize(isMilestone) {
+  return isMilestone ? 34 : 42;
+}
+function getIconSize(isMilestone) {
+  return isMilestone ? 17 : 23;
+}
+function normaliseSx(sx) {
+  if (!sx) return [];
+  return Array.isArray(sx) ? sx : [sx];
+}
+
+// src/components/timeline/two-column/timeline-dot/dot-inner.tsx
+import Box16 from "@mui/material/Box";
+import { jsx as jsx27 } from "react/jsx-runtime";
+function DotInner({ done, icon, animationKey, iconSize }) {
+  if (done) {
+    return /* @__PURE__ */ jsx27(
+      Box16,
+      {
+        component: "svg",
+        viewBox: "0 0 24 24",
+        fill: "none",
+        stroke: "currentColor",
+        strokeWidth: 2.8,
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        sx: doneCheckmarkSx(iconSize),
+        children: /* @__PURE__ */ jsx27("polyline", { points: "20 6 9 17 4 12" })
+      },
+      animationKey
+    );
+  }
+  return /* @__PURE__ */ jsx27(
+    Box16,
+    {
+      sx: {
+        display: "flex",
+        animation: animationKey > 0 ? `${checkPop} 0.36s cubic-bezier(0.34, 1.56, 0.64, 1)` : void 0
+      },
+      children: icon
+    },
+    animationKey
+  );
+}
+
+// src/components/timeline/two-column/timeline-dot/timeline-dot.tsx
+import { jsx as jsx28 } from "react/jsx-runtime";
+function TimelineDot({
+  icon,
+  color = "primary",
+  size = "phase",
+  active = false,
+  done = false,
+  animationKey = 0,
+  dotBg,
+  onClick,
+  onKeyDown,
+  role,
+  "aria-checked": ariaChecked,
+  "aria-label": ariaLabel,
+  tabIndex,
+  className,
+  sx,
+  ...other
+}) {
+  const isMilestone = size === "milestone";
+  const dotSize = getDotSize(isMilestone);
+  const iconSize = getIconSize(isMilestone);
+  const effectiveColor = resolveEffectiveColor(color, done);
+  return (
+    // Outer Box: controls size, position context, pulsing ::after ring, interaction.
+    // overflow: visible is mandatory — the ring extends 5 px outside via inset: -5
+    // and would be clipped by overflow: hidden.
+    /* @__PURE__ */ jsx28(
+      Box17,
+      {
+        className,
+        role,
+        "aria-checked": ariaChecked,
+        "aria-label": ariaLabel,
+        tabIndex,
+        onClick,
+        onKeyDown,
+        "data-active": active && !isMilestone ? "true" : void 0,
+        ...other,
+        sx: [
+          (theme) => ({
+            position: "relative",
+            width: dotSize,
+            height: dotSize,
+            flexShrink: 0,
+            overflow: "visible",
+            ...onClick && {
+              cursor: "pointer",
+              transition: "opacity 0.2s",
+              "&:hover": { opacity: 0.75 }
+            },
+            ...tabIndex !== void 0 && {
+              "&:focus-visible": {
+                outline: "none",
+                boxShadow: `0 0 0 3px ${theme.vars.palette[effectiveColor]?.main ?? theme.vars.palette.primary.main}`
+              }
+            }
+          }),
+          // Pulsing halo — phase dots only, active state, not done.
+          ...active && !isMilestone && !done ? [pulseRingAfterSx(effectiveColor)] : [],
+          ...normaliseSx(sx)
+        ],
+        children: /* @__PURE__ */ jsx28(Box17, { sx: timelineDotInnerSx(done, dotBg, effectiveColor, isMilestone, !!onClick), children: /* @__PURE__ */ jsx28(DotInner, { done, icon, animationKey, iconSize }) })
+      }
+    )
+  );
+}
+
+// src/components/timeline/two-column/two-column.tsx
+import {
+  useMemo as useMemo6,
+  useState as useState10,
+  useEffect as useEffect6,
+  useCallback as useCallback10,
+  useRef as useRef3,
+  useLayoutEffect
+} from "react";
+import Box28 from "@mui/material/Box";
+import Timeline from "@mui/lab/Timeline";
+
+// src/components/timeline/use-timeline-done-state.ts
+import { useEffect as useEffect5, useState as useState6 } from "react";
+function buildPhaseDoneRecord(phases) {
+  return Object.fromEntries(phases.map((p) => [String(p.key), p.done ?? false]));
+}
+function buildMilestoneDoneRecord(phases, sortFn) {
+  const m = {};
+  phases.forEach((p) => {
+    const sorted = p.milestones ? sortFn([...p.milestones]) : [];
+    sorted.forEach((ms, i) => {
+      m[`${p.key}-${i}`] = ms.done ?? false;
+    });
+  });
+  return m;
+}
+function buildTaskDoneRecord(phases, sortFn) {
+  const t = {};
+  phases.forEach((p) => {
+    const sortedMilestones = p.milestones ? sortFn([...p.milestones]) : [];
+    const childTasks = p.children && p.children.length > 0 ? p.children : sortedMilestones;
+    childTasks.forEach((task, childIndex) => {
+      resolveTaskChildren(task).forEach((nestedTask, taskIndex) => {
+        t[`${p.key}-c${childIndex}-t${taskIndex}`] = nestedTask.done ?? false;
+      });
+    });
+  });
+  return t;
+}
+function useTimelineDoneState(phases, sortOrder) {
+  const sortFn = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
+  const [localPhaseDone, setLocalPhaseDone] = useState6(
+    () => buildPhaseDoneRecord(phases)
+  );
+  const [localMilestoneDone, setLocalMilestoneDone] = useState6(
+    () => buildMilestoneDoneRecord(phases, sortFn)
+  );
+  const [localTaskDoneMap, setLocalTaskDoneMap] = useState6(
+    () => buildTaskDoneRecord(phases, sortFn)
+  );
+  useEffect5(() => {
+    const fn = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
+    setLocalPhaseDone(buildPhaseDoneRecord(phases));
+    setLocalMilestoneDone(buildMilestoneDoneRecord(phases, fn));
+    setLocalTaskDoneMap(buildTaskDoneRecord(phases, fn));
+  }, [phases, sortOrder]);
+  return {
+    localPhaseDone,
+    setLocalPhaseDone,
+    localMilestoneDone,
+    setLocalMilestoneDone,
+    localTaskDoneMap,
+    setLocalTaskDoneMap
+  };
+}
+
+// src/components/timeline/compact/compact.tsx
+import { useCallback as useCallback9, useMemo as useMemo5, useState as useState9 } from "react";
+import Box21 from "@mui/material/Box";
+
+// src/components/timeline/compact/compact.styles.ts
+import { alpha } from "@mui/material/styles";
+
+// src/components/timeline/compact/compact.const.ts
+var COMPACT_PHASE_DOT_SIZE = 32;
+var COMPACT_MILESTONE_DOT_SIZE = 24;
+var COMPACT_PHASE_ICON_SIZE = 18;
+var COMPACT_MILESTONE_ICON_SIZE = 14;
+var COMPACT_MIN_PHASE_DOT_SIZE = 18;
+var COMPACT_MIN_MILESTONE_DOT_SIZE = 18;
+
+// src/components/timeline/compact/compact.styles.ts
+var accordionDetailsSx = {
+  pt: 0,
+  pb: 2,
+  px: 2
+};
+var phaseTitleSx = {
+  flexGrow: 1,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+var dateSx = {
+  color: "text.secondary",
+  flexShrink: 0,
+  ml: 0.5
+};
+var descriptionSx = {
+  color: "text.secondary",
+  mb: 1.5
+};
+var milestonesListSx = {
+  m: 0,
+  p: 0,
+  mt: 1,
+  listStyle: "none"
+};
+var milestoneItemSx = (interactive, done) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 1.5,
+  cursor: interactive ? "pointer" : "default",
+  borderRadius: 1,
+  opacity: done ? 0.72 : 1,
+  ...interactive ? {
+    "&:hover": {
+      bgcolor: channelAlpha("var(--mui-palette-grey-500Channel)", 0.06)
+    }
+  } : null,
+  transition: "background-color 150ms, opacity 150ms",
+  py: 1,
+  px: 0.5
+});
+var milestoneDotColumnSx = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  flexShrink: 0,
+  width: COMPACT_MILESTONE_DOT_SIZE
+};
+var milestoneContentSx = {
+  flexGrow: 1,
+  overflow: "hidden",
+  pb: 0.5
+};
+var milestoneTitleSx = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+var milestoneDescriptionPreviewSx = {
+  color: "text.secondary",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  mt: 0.25
+};
+var milestoneDateSx2 = {
+  color: "text.secondary",
+  flexShrink: 0,
+  mt: 0.25
+};
+var phaseDotSx = (color) => (theme) => ({
+  width: COMPACT_PHASE_DOT_SIZE,
+  height: COMPACT_PHASE_DOT_SIZE,
+  borderRadius: "50%",
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  bgcolor: theme.vars?.palette[color].main ?? theme.palette[color].main,
+  color: "common.white"
+});
+var milestoneDotSx = (color) => (theme) => ({
+  width: COMPACT_MILESTONE_DOT_SIZE,
+  height: COMPACT_MILESTONE_DOT_SIZE,
+  borderRadius: "50%",
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  bgcolor: theme.vars?.palette[color].main ?? theme.palette[color].main,
+  color: "common.white"
+});
+var milestoneConnectorLineSx = {
+  width: 2,
+  flexGrow: 1,
+  minHeight: 16,
+  bgcolor: "divider",
+  mt: 0.5
+};
+var accordionRootSx2 = (done, active = false, expanded = false, color = "primary") => (theme) => {
+  const neutralColor = typeof theme.palette.grey?.[500] === "string" ? theme.palette.grey[500] : "#919eab";
+  const activeColor = theme.palette[color].main;
+  const neutralBg = alpha(neutralColor, 0.08);
+  const activeBg = alpha(activeColor, 0.12);
+  const activeBorder = alpha(activeColor, 0.24);
+  const isActiveExpanded = active && expanded;
+  const transitionDuration = theme.transitions?.duration?.shorter ?? 250;
+  const colorTransition = theme.transitions?.create ? theme.transitions.create(["background-color", "border-color"], {
+    duration: transitionDuration
+  }) : "background-color 250ms, border-color 250ms";
+  return {
+    py: 1,
+    px: 2.5,
+    border: isActiveExpanded ? `1px solid ${activeBorder}` : "none",
+    borderRadius: 2,
+    boxShadow: "none",
+    backgroundColor: isActiveExpanded ? activeBg : "transparent",
+    "&:before": { display: "none" },
+    "&.Mui-expanded": {
+      margin: 0,
+      bgcolor: isActiveExpanded ? activeBg : neutralBg,
+      border: isActiveExpanded ? `1px solid ${activeBorder}` : "none"
+    },
+    "&:hover": {
+      bgcolor: neutralBg
+    },
+    opacity: done ? 0.65 : 1,
+    transition: `${colorTransition}, opacity 300ms`
+  };
+};
+
+// src/components/timeline/compact/phase-accordion-row.tsx
+import { useCallback as useCallback8, useState as useState8 } from "react";
+import Box20 from "@mui/material/Box";
+import SvgIcon2 from "@mui/material/SvgIcon";
+import Typography15 from "@mui/material/Typography";
+
+// src/utils/use-nested-checklist.ts
+import { useCallback as useCallback7, useMemo as useMemo4, useState as useState7 } from "react";
+function useNestedChecklist(initialParentDone, initialChildrenDone) {
+  const [parentDone, setParentDone] = useState7(initialParentDone);
+  const [childrenDone, setChildrenDone] = useState7(initialChildrenDone);
+  const indeterminate = useMemo4(
+    () => childrenDone.some(Boolean) && !childrenDone.every(Boolean),
+    [childrenDone]
+  );
+  const toggleParent = useCallback7(() => {
+    const next = !parentDone;
+    setParentDone(next);
+    setChildrenDone((prev) => prev.map(() => next));
+  }, [parentDone]);
+  const toggleChild = useCallback7((index) => {
+    setChildrenDone((prev) => {
+      const next = prev.map((v, i) => i === index ? !v : v);
+      setParentDone(next.every(Boolean));
+      return next;
+    });
+  }, []);
+  return { parentDone, indeterminate, childrenDone, toggleParent, toggleChild };
+}
+
+// src/components/timeline/compact/chevron-down-icon.tsx
+import { jsx as jsx29 } from "react/jsx-runtime";
+function ChevronDownIcon() {
+  return /* @__PURE__ */ jsx29(
+    "svg",
+    {
+      width: "16",
+      height: "16",
+      viewBox: "0 0 24 24",
+      fill: "currentColor",
+      "aria-hidden": "true",
+      focusable: "false",
+      children: /* @__PURE__ */ jsx29("path", { d: "M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" })
+    }
+  );
+}
+
+// src/components/timeline/compact/milestone-modal.tsx
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import Divider2 from "@mui/material/Divider";
+import IconButton3 from "@mui/material/IconButton";
+import Typography14 from "@mui/material/Typography";
+import useMediaQuery from "@mui/material/useMediaQuery";
+
+// src/components/timeline/compact/milestone-modal.styles.ts
+var dialogTitleSx = {
+  display: "flex",
+  alignItems: "flex-start",
+  justifyContent: "space-between",
+  gap: 1,
+  pr: 1
+};
+var dialogDateSx = {
+  color: "text.secondary",
+  mt: 0.25
+};
+
+// src/components/timeline/compact/task-details-renderer.tsx
+import Box19 from "@mui/material/Box";
+import Typography13 from "@mui/material/Typography";
+
+// src/components/timeline/task-list/task-list.tsx
+import Checkbox2 from "@mui/material/Checkbox";
+import Box18 from "@mui/material/Box";
+import Typography12 from "@mui/material/Typography";
+
+// src/components/timeline/task-list/task-list.styles.ts
+var taskListBaseSx = {
+  mt: 0,
+  mb: 1.5,
+  pl: 2,
+  color: "text.secondary",
+  listStyle: "none"
+};
+var taskListMilestoneSx = {
+  mt: 0,
+  mb: 1.5,
+  pl: 3,
+  color: "text.secondary",
+  listStyle: "none"
+};
+var taskItemSx = {
+  display: "flex",
+  alignItems: "center",
+  mb: 0.25
+};
+var taskCheckboxSx = {
+  p: 0.5,
+  mr: 0.5
+};
+var taskCaptionSx = (isDone) => () => ({
+  color: "text.secondary",
+  textDecoration: isDone ? "line-through" : "none"
+});
+
+// src/components/timeline/task-list/task-list.tsx
+import { jsx as jsx30, jsxs as jsxs16 } from "react/jsx-runtime";
+function TaskList({
+  tasks,
+  checklist = false,
+  taskDoneState,
+  onTaskToggle,
+  indent = "phase",
+  sx,
+  ...other
+}) {
+  const listSx = indent === "milestone" ? taskListMilestoneSx : taskListBaseSx;
+  return /* @__PURE__ */ jsx30(Box18, { component: "ul", sx: [listSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: tasks.map((task, i) => {
+    const isDone = taskDoneState?.[i] ?? task.done ?? false;
+    return /* @__PURE__ */ jsxs16(Box18, { component: "li", sx: taskItemSx, children: [
+      checklist && /* @__PURE__ */ jsx30(
+        Checkbox2,
+        {
+          size: "small",
+          checked: isDone,
+          onChange: () => onTaskToggle?.(i),
+          sx: taskCheckboxSx,
+          slotProps: { input: { "aria-label": task.title } }
+        }
+      ),
+      /* @__PURE__ */ jsx30(Typography12, { variant: "caption", sx: taskCaptionSx(isDone), children: task.title })
+    ] }, i);
+  }) });
+}
+
+// src/components/timeline/compact/task-details-renderer.styles.ts
+var taskDetailsSummarySx = {
+  color: "text.secondary",
+  mb: 2
+};
+var taskDetailsContentSx = {
+  display: "grid",
+  gap: 2
+};
+var taskDetailsEmptyStateSx = {
+  color: "text.disabled"
+};
+
+// src/components/timeline/compact/utils.ts
+function resolveCompactColor(color, done) {
+  if (done) return "success";
+  if (!color || color === "inherit" || color === "grey") return "primary";
+  return color;
+}
+
+// src/components/timeline/compact/task-details-renderer.tsx
+import { jsx as jsx31, jsxs as jsxs17 } from "react/jsx-runtime";
+function renderDetailsNode(node) {
+  if (!node) return null;
+  if (typeof node === "string") {
+    return /* @__PURE__ */ jsx31(Typography13, { variant: "body2", sx: taskDetailsSummarySx, children: node });
+  }
+  return node;
+}
+function TaskDetailsRenderer({
+  task,
+  checklist = false,
+  taskDoneState,
+  onTaskToggle,
+  emptyState = "No additional details.",
+  sx,
+  ...other
+}) {
+  const nestedTasks = resolveTaskChildren(task);
+  const hasInlineDescription = Boolean(task.description);
+  const hasSummary = Boolean(task.details?.summary);
+  const hasContent = Boolean(task.details?.content);
+  const hasTasks = nestedTasks.length > 0;
+  return /* @__PURE__ */ jsxs17(Box19, { sx: [taskDetailsContentSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    hasInlineDescription && /* @__PURE__ */ jsx31(Typography13, { variant: "body2", sx: taskDetailsSummarySx, children: task.description }),
+    !hasInlineDescription && renderDetailsNode(task.details?.summary),
+    hasContent && renderDetailsNode(task.details?.content),
+    hasTasks && /* @__PURE__ */ jsx31(
+      TaskList,
+      {
+        tasks: nestedTasks,
+        checklist,
+        taskDoneState,
+        onTaskToggle,
+        indent: "milestone"
+      }
+    ),
+    !hasInlineDescription && !hasSummary && !hasContent && !hasTasks && /* @__PURE__ */ jsx31(Typography13, { variant: "body2", sx: taskDetailsEmptyStateSx, children: emptyState })
+  ] });
+}
+
+// src/components/timeline/compact/milestone-modal.tsx
+import { jsx as jsx32, jsxs as jsxs18 } from "react/jsx-runtime";
+function TaskDetailsModal({
+  task,
+  open,
+  onClose,
+  checklist = false,
+  taskDoneState,
+  onTaskToggle
+}) {
+  const fullScreen = useMediaQuery("(max-width:599.95px)");
+  if (!task) return null;
+  return /* @__PURE__ */ jsxs18(
+    Dialog,
+    {
+      open,
+      onClose,
+      fullWidth: true,
+      maxWidth: "sm",
+      fullScreen,
+      scroll: "paper",
+      children: [
+        /* @__PURE__ */ jsxs18(DialogTitle, { sx: dialogTitleSx, children: [
+          /* @__PURE__ */ jsxs18("div", { children: [
+            /* @__PURE__ */ jsx32(Typography14, { variant: "h6", component: "span", children: task.title }),
+            task.date && /* @__PURE__ */ jsx32(Typography14, { variant: "caption", display: "block", sx: dialogDateSx, children: task.date })
+          ] }),
+          /* @__PURE__ */ jsx32(IconButton3, { "aria-label": "Close details", onClick: onClose, sx: { mt: 0.5, flexShrink: 0 }, children: /* @__PURE__ */ jsx32("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ jsx32("path", { d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" }) }) })
+        ] }),
+        /* @__PURE__ */ jsx32(Divider2, {}),
+        /* @__PURE__ */ jsx32(DialogContent, { sx: { pt: 2 }, children: /* @__PURE__ */ jsx32(
+          TaskDetailsRenderer,
+          {
+            task,
+            checklist,
+            taskDoneState,
+            onTaskToggle
+          }
+        ) })
+      ]
+    }
+  );
+}
+
+// src/components/timeline/compact/phase-accordion-row.tsx
+import { Fragment as Fragment3, jsx as jsx33, jsxs as jsxs19 } from "react/jsx-runtime";
+var CHECK_DONE_DOT = /* @__PURE__ */ jsx33(Box20, { sx: phaseDotSx("success"), "aria-hidden": "true", children: /* @__PURE__ */ jsx33(
+  "svg",
+  {
+    width: COMPACT_PHASE_ICON_SIZE,
+    height: COMPACT_PHASE_ICON_SIZE,
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    "aria-hidden": "true",
+    children: /* @__PURE__ */ jsx33("path", { d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" })
+  }
+) });
+var CHECK_HOVER_DOT = /* @__PURE__ */ jsx33(SvgIcon2, { sx: { color: "success.main", fontSize: COMPACT_PHASE_DOT_SIZE }, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx33("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
+var MS_CHECK_DONE_DOT = /* @__PURE__ */ jsx33(
+  Box20,
+  {
+    sx: phaseDotSx("success"),
+    style: { width: COMPACT_MILESTONE_DOT_SIZE, height: COMPACT_MILESTONE_DOT_SIZE, flexShrink: 0 },
+    "aria-hidden": "true",
+    children: /* @__PURE__ */ jsx33(
+      "svg",
+      {
+        width: COMPACT_MILESTONE_ICON_SIZE,
+        height: COMPACT_MILESTONE_ICON_SIZE,
+        viewBox: "0 0 24 24",
+        fill: "currentColor",
+        "aria-hidden": "true",
+        children: /* @__PURE__ */ jsx33("path", { d: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" })
+      }
+    )
+  }
+);
+var MS_CHECK_HOVER_DOT = /* @__PURE__ */ jsx33(SvgIcon2, { sx: { color: "success.main", fontSize: COMPACT_MILESTONE_DOT_SIZE }, viewBox: "0 0 24 24", children: /* @__PURE__ */ jsx33("path", { d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8-1.41-1.42z" }) });
+var accordionSummaryOverrideSx = {
+  "& .MuiAccordionSummary-root": { minHeight: 56 },
+  "& .MuiAccordionSummary-root.Mui-expanded": { minHeight: 56 },
+  "& .MuiAccordionSummary-content": { display: "flex", alignItems: "center", gap: 1.5 },
+  "& .MuiAccordionSummary-expandIconWrapper": {
+    color: "text.secondary",
+    display: "flex",
+    alignItems: "center",
+    alignSelf: "center"
+  }
+};
+function PhaseAccordionRow({
+  phase,
+  sortedMilestones,
+  checklist,
+  taskDoneMap,
+  onTaskToggle,
+  onMarkViewed,
+  onTogglePhaseDone,
+  onToggleMilestoneDone,
+  expandedPhaseKey,
+  onToggleExpanded
+}) {
+  const { parentDone, indeterminate, childrenDone, toggleParent, toggleChild } = useNestedChecklist(
+    phase.done ?? false,
+    sortedMilestones.map((ms) => ms.done ?? false)
+  );
+  const [modalTask, setModalTask] = useState8(null);
+  const effectiveColor = resolveCompactColor(phase.color, parentDone);
+  const childTasks = phase.children && phase.children.length > 0 ? phase.children : sortedMilestones;
+  const usesMilestoneChildren = !(phase.children && phase.children.length > 0);
+  const hasDetails = Boolean(phase.description) || childTasks.length > 0;
+  const handleToggleParent = useCallback8(() => {
+    toggleParent();
+    onTogglePhaseDone?.(phase.key, !parentDone);
+  }, [toggleParent, onTogglePhaseDone, phase.key, parentDone]);
+  const handleAccordionChange = useCallback8(
+    (_e, expanded) => {
+      onToggleExpanded(phase.key);
+      if (expanded) onMarkViewed?.(`phase-${phase.key}`);
+    },
+    [onMarkViewed, onToggleExpanded, phase.key]
+  );
+  const phaseDot = /* @__PURE__ */ jsx33(Box20, { sx: phaseDotSx(effectiveColor), "aria-hidden": "true", children: phase.icon });
+  const leadingAction = checklist ? void 0 : phaseDot;
+  const checkIcon = checklist ? phaseDot : void 0;
+  const checkDoneIcon = checklist ? CHECK_DONE_DOT : void 0;
+  const checkHoverIcon = checklist ? CHECK_HOVER_DOT : void 0;
+  const titleContent = /* @__PURE__ */ jsx33(Typography15, { variant: "subtitle2", sx: phaseTitleSx, children: phase.shortTitle ?? phase.title });
+  const dateLabel = phase.date ? /* @__PURE__ */ jsx33(Typography15, { variant: "caption", sx: dateSx, children: phase.date }) : null;
+  const isExpanded = expandedPhaseKey === phase.key;
+  return /* @__PURE__ */ jsxs19(Fragment3, { children: [
+    /* @__PURE__ */ jsx33(
+      Accordion,
+      {
+        disableGutters: true,
+        elevation: 0,
+        checklist,
+        checkIcon,
+        checkDoneIcon,
+        checkHoverIcon,
+        leadingAction,
+        done: parentDone,
+        indeterminate,
+        onDoneButtonClick: handleToggleParent,
+        trailingContent: dateLabel,
+        expandIcon: hasDetails ? /* @__PURE__ */ jsx33(ChevronDownIcon, {}) : null,
+        title: titleContent,
+        expanded: isExpanded,
+        onChange: handleAccordionChange,
+        sx: [
+          accordionRootSx2(parentDone, Boolean(phase.active), isExpanded, effectiveColor),
+          accordionSummaryOverrideSx
+        ],
+        children: hasDetails && /* @__PURE__ */ jsxs19(Box20, { sx: accordionDetailsSx, children: [
+          phase.description && /* @__PURE__ */ jsx33(Typography15, { variant: "body2", sx: descriptionSx, children: phase.description }),
+          childTasks.length > 0 && /* @__PURE__ */ jsx33(Box20, { component: "ul", sx: milestonesListSx, children: childTasks.map((task, idx) => {
+            const isDone = usesMilestoneChildren ? childrenDone[idx] ?? false : task.done ?? false;
+            const idleDotColor = resolveCompactColor(task.color ?? phase.color, isDone);
+            const isLast = idx === childTasks.length - 1;
+            const nestedTasks = resolveTaskChildren(task);
+            const canOpen = Boolean(task.description) || Boolean(task.details?.summary) || Boolean(task.details?.content) || nestedTasks.length > 0;
+            const dotNode = /* @__PURE__ */ jsx33(Box20, { sx: milestoneDotSx(idleDotColor), "aria-hidden": "true", children: task.icon });
+            const rowButtonProps = canOpen ? {
+              onClick: () => setModalTask({ task, idx }),
+              role: "button",
+              tabIndex: 0,
+              "aria-label": `View details: ${task.title}`,
+              onKeyDown: (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setModalTask({ task, idx });
+                }
+              }
+            } : {};
+            return /* @__PURE__ */ jsxs19(
+              Box20,
+              {
+                component: "li",
+                sx: milestoneItemSx(canOpen, isDone),
+                ...rowButtonProps,
+                children: [
+                  /* @__PURE__ */ jsxs19(Box20, { sx: milestoneDotColumnSx, children: [
+                    checklist && usesMilestoneChildren ? /* @__PURE__ */ jsx33(
+                      ToggleIconButton,
+                      {
+                        pressed: isDone,
+                        idleIcon: dotNode,
+                        pressedIcon: MS_CHECK_DONE_DOT,
+                        hoverIcon: MS_CHECK_HOVER_DOT,
+                        onPressedChange: (newDone) => {
+                          toggleChild(idx);
+                          onToggleMilestoneDone?.(phase.key, idx, newDone);
+                        },
+                        "aria-label": isDone ? "Mark as not done" : "Mark as done"
+                      }
+                    ) : dotNode,
+                    !isLast && /* @__PURE__ */ jsx33(Box20, { "aria-hidden": "true", sx: milestoneConnectorLineSx })
+                  ] }),
+                  /* @__PURE__ */ jsxs19(Box20, { sx: milestoneContentSx, children: [
+                    /* @__PURE__ */ jsx33(Typography15, { variant: "subtitle2", sx: milestoneTitleSx, children: task.shortTitle ?? task.title }),
+                    task.description && /* @__PURE__ */ jsx33(Typography15, { variant: "body2", sx: milestoneDescriptionPreviewSx, children: task.description })
+                  ] }),
+                  task.date && /* @__PURE__ */ jsx33(Typography15, { variant: "caption", sx: milestoneDateSx2, children: task.date })
+                ]
+              },
+              `${phase.key}-child-${task.key}`
+            );
+          }) })
+        ] })
+      }
+    ),
+    /* @__PURE__ */ jsx33(
+      TaskDetailsModal,
+      {
+        task: modalTask?.task ?? null,
+        open: modalTask !== null,
+        onClose: () => setModalTask(null),
+        checklist,
+        taskDoneState: modalTask ? resolveTaskChildren(modalTask.task).map(
+          (task, i) => taskDoneMap[`${phase.key}-c${modalTask.idx}-t${i}`] ?? task.done ?? false
+        ) : void 0,
+        onTaskToggle: modalTask ? (i) => onTaskToggle(phase.key, modalTask.idx, i) : void 0
+      }
+    )
+  ] });
+}
+
+// src/components/timeline/compact/compact.tsx
+import { jsx as jsx34 } from "react/jsx-runtime";
+function TimelineCompact({
+  phases,
+  checklist = false,
+  sortOrder = "desc",
+  viewedKeys: _viewedKeys,
+  onMarkViewed,
+  onTogglePhaseDone,
+  onToggleMilestoneDone,
+  onToggleTaskDone,
+  sx,
+  ...other
+}) {
+  const sortMilestones = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
+  const sorted = useMemo5(() => sortPhasesByDate(phases, sortOrder), [phases, sortOrder]);
+  const { localTaskDoneMap, setLocalTaskDoneMap } = useTimelineDoneState(phases, sortOrder);
+  const handleTaskToggle = useCallback9(
+    (phaseKey, childIdx, taskIdx) => {
+      const k = childIdx === null ? `${phaseKey}-t${taskIdx}` : `${phaseKey}-c${childIdx}-t${taskIdx}`;
+      const next = !(localTaskDoneMap[k] ?? false);
+      setLocalTaskDoneMap((prev) => ({ ...prev, [k]: next }));
+      onToggleTaskDone?.(phaseKey, childIdx, taskIdx, next);
+    },
+    [localTaskDoneMap, onToggleTaskDone, setLocalTaskDoneMap]
+  );
+  const [expandedPhaseKey, setExpandedPhaseKey] = useState9(null);
+  const handleToggleExpanded = useCallback9((key) => {
+    setExpandedPhaseKey((prev) => prev === key ? null : key);
+  }, []);
+  return /* @__PURE__ */ jsx34(Box21, { sx: [accordionRootSx2(false), ...Array.isArray(sx) ? sx : [sx]], ...other, children: sorted.map((phase) => {
+    const sortedMilestones = phase.milestones ? sortMilestones([...phase.milestones]) : [];
+    return /* @__PURE__ */ jsx34(
+      PhaseAccordionRow,
+      {
+        phase,
+        sortedMilestones,
+        checklist,
+        taskDoneMap: localTaskDoneMap,
+        onTaskToggle: handleTaskToggle,
+        onMarkViewed,
+        onTogglePhaseDone,
+        onToggleMilestoneDone,
+        expandedPhaseKey,
+        onToggleExpanded: handleToggleExpanded
+      },
+      phase.key
+    );
+  }) });
+}
+
+// src/components/timeline/two-column/milestone-row.tsx
+import Box22 from "@mui/material/Box";
+import Tooltip5 from "@mui/material/Tooltip";
+import Typography16 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/two-column.styles.ts
 var timelineColumnSx = (columnSide, _hasContent, bottomPadding) => ({
@@ -3486,7 +3878,7 @@ var phaseDotWrapperSx = {
 };
 
 // src/components/timeline/two-column/milestone-row.tsx
-import { jsx as jsx30, jsxs as jsxs19 } from "react/jsx-runtime";
+import { jsx as jsx35, jsxs as jsxs20 } from "react/jsx-runtime";
 function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
   const { msDone, msColor } = resolveMilestoneState(
     ms,
@@ -3516,15 +3908,15 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
     "aria-label": msDotAriaLabel,
     tabIndex: 0
   } : {};
-  return /* @__PURE__ */ jsxs19(Box22, { sx: msRowSx(topPercent), children: [
-    /* @__PURE__ */ jsx30(Box22, { "data-col": "left", sx: msColumnBoxSx("left", effectiveMsSide === "left"), children: effectiveMsSide === "left" && /* @__PURE__ */ jsx30(
+  return /* @__PURE__ */ jsxs20(Box22, { sx: msRowSx(topPercent), children: [
+    /* @__PURE__ */ jsx35(Box22, { "data-col": "left", sx: msColumnBoxSx("left", effectiveMsSide === "left"), children: effectiveMsSide === "left" && /* @__PURE__ */ jsx35(
       Box22,
       {
         "data-ms-card": "true",
         ref: (el) => ctx.onMeasure(mi, el),
         onClick: stopProp,
         sx: msCardWrapperSx(isThisMsExpanded, suppressElevation, "left"),
-        children: /* @__PURE__ */ jsx30(
+        children: /* @__PURE__ */ jsx35(
           MilestoneBadge,
           {
             milestone: ms,
@@ -3536,8 +3928,14 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
             columnSide: "left",
             isViewed: ctx.viewedKeys.has(`ms-${ctx.phaseKey}-${mi}`),
             onMarkViewed: ctx.onMarkViewed ? () => ctx.onMarkViewed(`ms-${ctx.phaseKey}-${mi}`) : void 0,
-            taskDoneStates: ms.children?.map(
-              (task, ti) => ctx.localTaskDoneMap[`${ctx.phaseKey}-m${mi}-t${ti}`] ?? task.done ?? false
+            taskDoneStates: resolveTaskChildren(ms).reduce(
+              (acc, task, ti) => {
+                const done = ctx.localTaskDoneMap[`${ctx.phaseKey}-c${mi}-t${ti}`] ?? task.done ?? false;
+                acc[String(task.key)] = done;
+                acc[`idx-${ti}`] = done;
+                return acc;
+              },
+              {}
             ),
             onToggleTask: (taskIdx, _done) => ctx.handleToggleTask(ctx.phaseKey, mi, taskIdx),
             onRequestExpand: () => ctx.handleExpandMilestone(ctx.phaseKey, mi)
@@ -3545,15 +3943,15 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
         )
       }
     ) }),
-    /* @__PURE__ */ jsx30(Box22, { "data-col": "center", sx: centerColumnSx, children: /* @__PURE__ */ jsxs19(Box22, { sx: msDotWrapperSx(suppressElevation), children: [
-      ms.date && /* @__PURE__ */ jsx30(Typography16, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: ms.date }),
-      /* @__PURE__ */ jsx30(
+    /* @__PURE__ */ jsx35(Box22, { "data-col": "center", sx: centerColumnSx, children: /* @__PURE__ */ jsxs20(Box22, { sx: msDotWrapperSx(suppressElevation), children: [
+      ms.date && /* @__PURE__ */ jsx35(Typography16, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: ms.date }),
+      /* @__PURE__ */ jsx35(
         Tooltip5,
         {
           title: resolveMilestoneTooltip(ctx.checklist, msColor, msDone, ms),
           placement: "top",
           arrow: true,
-          children: /* @__PURE__ */ jsx30("span", { children: /* @__PURE__ */ jsx30(
+          children: /* @__PURE__ */ jsx35("span", { children: /* @__PURE__ */ jsx35(
             TimelineDot,
             {
               icon: ms.icon,
@@ -3569,14 +3967,14 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
         }
       )
     ] }) }),
-    /* @__PURE__ */ jsx30(Box22, { "data-col": "right", sx: msColumnBoxSx("right", effectiveMsSide === "right"), children: effectiveMsSide === "right" && /* @__PURE__ */ jsx30(
+    /* @__PURE__ */ jsx35(Box22, { "data-col": "right", sx: msColumnBoxSx("right", effectiveMsSide === "right"), children: effectiveMsSide === "right" && /* @__PURE__ */ jsx35(
       Box22,
       {
         "data-ms-card": "true",
         ref: (el) => ctx.onMeasure(mi, el),
         onClick: stopProp,
         sx: msCardWrapperSx(isThisMsExpanded, suppressElevation, "right"),
-        children: /* @__PURE__ */ jsx30(
+        children: /* @__PURE__ */ jsx35(
           MilestoneBadge,
           {
             milestone: ms,
@@ -3587,8 +3985,14 @@ function MilestoneRow({ ms, mi, totalMilestones, ctx }) {
             expandableIcon: ctx.expandableIcon,
             isViewed: ctx.viewedKeys.has(`ms-${ctx.phaseKey}-${mi}`),
             onMarkViewed: ctx.onMarkViewed ? () => ctx.onMarkViewed(`ms-${ctx.phaseKey}-${mi}`) : void 0,
-            taskDoneStates: ms.children?.map(
-              (task, ti) => ctx.localTaskDoneMap[`${ctx.phaseKey}-m${mi}-t${ti}`] ?? task.done ?? false
+            taskDoneStates: resolveTaskChildren(ms).reduce(
+              (acc, task, ti) => {
+                const done = ctx.localTaskDoneMap[`${ctx.phaseKey}-c${mi}-t${ti}`] ?? task.done ?? false;
+                acc[String(task.key)] = done;
+                acc[`idx-${ti}`] = done;
+                return acc;
+              },
+              {}
             ),
             onToggleTask: (taskIdx, _done) => ctx.handleToggleTask(ctx.phaseKey, mi, taskIdx),
             onRequestExpand: () => ctx.handleExpandMilestone(ctx.phaseKey, mi)
@@ -3606,11 +4010,11 @@ import Tooltip6 from "@mui/material/Tooltip";
 // src/components/timeline/two-column/marker-label.tsx
 import Box23 from "@mui/material/Box";
 import Typography17 from "@mui/material/Typography";
-import { jsxs as jsxs20 } from "react/jsx-runtime";
+import { jsxs as jsxs21 } from "react/jsx-runtime";
 function MarkerLabel({ title, date }) {
-  return /* @__PURE__ */ jsxs20(Typography17, { variant: "caption", sx: markerCaptionSx, children: [
+  return /* @__PURE__ */ jsxs21(Typography17, { variant: "caption", sx: markerCaptionSx, children: [
     title,
-    date && /* @__PURE__ */ jsxs20(Box23, { component: "span", sx: markerDateSpanSx, children: [
+    date && /* @__PURE__ */ jsxs21(Box23, { component: "span", sx: markerDateSpanSx, children: [
       "\xB7 ",
       date
     ] })
@@ -3644,7 +4048,7 @@ var yearLabelSx = (marginBottom) => ({
 });
 
 // src/components/timeline/two-column/spine-connector/spine-connector.tsx
-import { jsx as jsx31 } from "react/jsx-runtime";
+import { jsx as jsx36 } from "react/jsx-runtime";
 function SpineConnector({
   dotColor,
   yearMilestone,
@@ -3652,7 +4056,7 @@ function SpineConnector({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx31(
+  return /* @__PURE__ */ jsx36(
     Box24,
     {
       ...other,
@@ -3667,13 +4071,13 @@ function SpineConnector({
         }),
         ...Array.isArray(sx) ? sx : [sx]
       ],
-      children: yearMilestone && /* @__PURE__ */ jsx31(Typography18, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
+      children: yearMilestone && /* @__PURE__ */ jsx36(Typography18, { variant: "caption", sx: yearLabelSx(yearLabelMarginBottom), children: yearMilestone })
     }
   );
 }
 
 // src/components/timeline/two-column/marker-row.tsx
-import { jsx as jsx32, jsxs as jsxs21 } from "react/jsx-runtime";
+import { jsx as jsx37, jsxs as jsxs22 } from "react/jsx-runtime";
 function MarkerRow({
   phase,
   isLastPhase,
@@ -3686,13 +4090,13 @@ function MarkerRow({
 }) {
   const markerTooltip = resolvePhaseTooltip(checklist, dotColor, isDone, phase);
   const shouldShowRightLabel = phase.side !== "left" || isMobile;
-  return /* @__PURE__ */ jsx32(Box25, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, ...other, children: /* @__PURE__ */ jsxs21(Box25, { sx: markerRowInnerSx, children: [
-    /* @__PURE__ */ jsx32(Box25, { sx: markerLabelSlotSx("left"), children: phase.side === "left" && /* @__PURE__ */ jsx32(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) }),
-    /* @__PURE__ */ jsxs21(Box25, { "data-col": "center", sx: markerCenterSx, children: [
-      /* @__PURE__ */ jsx32(Tooltip6, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ jsx32("span", { children: /* @__PURE__ */ jsx32(TimelineDot, { icon: phase.icon, color: dotColor, size: "milestone", done: isDone }) }) }),
-      !isLastPhase && /* @__PURE__ */ jsx32(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
+  return /* @__PURE__ */ jsx37(Box25, { component: "li", "data-testid": "tl-item", sx: markerPhaseLiSx, ...other, children: /* @__PURE__ */ jsxs22(Box25, { sx: markerRowInnerSx, children: [
+    /* @__PURE__ */ jsx37(Box25, { sx: markerLabelSlotSx("left"), children: phase.side === "left" && /* @__PURE__ */ jsx37(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) }),
+    /* @__PURE__ */ jsxs22(Box25, { "data-col": "center", sx: markerCenterSx, children: [
+      /* @__PURE__ */ jsx37(Tooltip6, { title: markerTooltip, placement: "top", arrow: true, children: /* @__PURE__ */ jsx37("span", { children: /* @__PURE__ */ jsx37(TimelineDot, { icon: phase.icon, color: dotColor, size: "milestone", done: isDone }) }) }),
+      !isLastPhase && /* @__PURE__ */ jsx37(SpineConnector, { dotColor, yearMilestone: yearLabelValue })
     ] }),
-    /* @__PURE__ */ jsx32(Box25, { sx: markerLabelSlotSx("right"), children: shouldShowRightLabel && /* @__PURE__ */ jsx32(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) })
+    /* @__PURE__ */ jsx37(Box25, { sx: markerLabelSlotSx("right"), children: shouldShowRightLabel && /* @__PURE__ */ jsx37(MarkerLabel, { title: phase.shortTitle ?? phase.title, date: phase.date }) })
   ] }) });
 }
 
@@ -3703,18 +4107,18 @@ import Typography19 from "@mui/material/Typography";
 
 // src/components/timeline/two-column/timeline-column.tsx
 import Box26 from "@mui/material/Box";
-import { jsx as jsx33 } from "react/jsx-runtime";
+import { jsx as jsx38 } from "react/jsx-runtime";
 function TimelineColumn({
   columnSide,
   hasContent,
   children,
   bottomPadding
 }) {
-  return /* @__PURE__ */ jsx33(Box26, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
+  return /* @__PURE__ */ jsx38(Box26, { "data-col": columnSide, sx: timelineColumnSx(columnSide, hasContent, bottomPadding), children });
 }
 
 // src/components/timeline/two-column/phase-row.tsx
-import { jsx as jsx34, jsxs as jsxs22 } from "react/jsx-runtime";
+import { jsx as jsx39, jsxs as jsxs23 } from "react/jsx-runtime";
 function PhaseRow({
   phase,
   isSuppressed,
@@ -3733,8 +4137,8 @@ function PhaseRow({
   selectedPhaseKey,
   isMobile
 }) {
-  return /* @__PURE__ */ jsxs22(Box27, { sx: phaseRowSx(isSuppressed), children: [
-    /* @__PURE__ */ jsx34(
+  return /* @__PURE__ */ jsxs23(Box27, { sx: phaseRowSx(isSuppressed), children: [
+    /* @__PURE__ */ jsx39(
       TimelineColumn,
       {
         columnSide: "left",
@@ -3743,16 +4147,16 @@ function PhaseRow({
         children: !isMobile && phase.side === "left" && phaseCardNode
       }
     ),
-    /* @__PURE__ */ jsxs22(Box27, { "data-col": "center", sx: centerColumnSx, children: [
-      /* @__PURE__ */ jsxs22(Box27, { sx: phaseDotWrapperSx, children: [
-        !phase.hideDate && phase.date && /* @__PURE__ */ jsx34(Typography19, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
-        /* @__PURE__ */ jsx34(
+    /* @__PURE__ */ jsxs23(Box27, { "data-col": "center", sx: centerColumnSx, children: [
+      /* @__PURE__ */ jsxs23(Box27, { sx: phaseDotWrapperSx, children: [
+        !phase.hideDate && phase.date && /* @__PURE__ */ jsx39(Typography19, { variant: "caption", "aria-hidden": true, sx: floatingDatePillSx, children: phase.date }),
+        /* @__PURE__ */ jsx39(
           Tooltip7,
           {
             title: resolvePhaseTooltip(checklist, dotColor, isDone, phase),
             placement: "top",
             arrow: true,
-            children: /* @__PURE__ */ jsx34("span", { children: /* @__PURE__ */ jsx34(
+            children: /* @__PURE__ */ jsx39("span", { children: /* @__PURE__ */ jsx39(
               TimelineDot,
               {
                 icon: phase.icon,
@@ -3773,7 +4177,7 @@ function PhaseRow({
           }
         )
       ] }),
-      !isLastPhase && /* @__PURE__ */ jsx34(
+      !isLastPhase && /* @__PURE__ */ jsx39(
         SpineConnector,
         {
           dotColor,
@@ -3782,7 +4186,7 @@ function PhaseRow({
         }
       )
     ] }),
-    /* @__PURE__ */ jsx34(
+    /* @__PURE__ */ jsx39(
       TimelineColumn,
       {
         columnSide: "right",
@@ -3795,9 +4199,12 @@ function PhaseRow({
 }
 
 // src/components/timeline/two-column/two-column.tsx
-import { Fragment as Fragment3, jsx as jsx35, jsxs as jsxs23 } from "react/jsx-runtime";
-var useIsomorphicLayoutEffect = globalThis.window === void 0 ? useEffect3 : useLayoutEffect;
+import { Fragment as Fragment4, jsx as jsx40, jsxs as jsxs24 } from "react/jsx-runtime";
+var useIsomorphicLayoutEffect = globalThis.window === void 0 ? useEffect6 : useLayoutEffect;
 var EMPTY_VIEWED_KEYS = /* @__PURE__ */ new Set();
+function makeTaskStateKey(phaseKey, childIdx, taskIdx) {
+  return childIdx === null ? `${phaseKey}-t${taskIdx}` : `${phaseKey}-c${childIdx}-t${taskIdx}`;
+}
 function TimelineTwoColumn({
   phases,
   checklist = false,
@@ -3825,12 +4232,13 @@ function TimelineTwoColumn({
     localTaskDoneMap,
     setLocalTaskDoneMap
   } = useTimelineDoneState(phases, sortOrder);
-  const [phaseToggleCounts, setPhaseToggleCounts] = useState8({});
-  const [expandedMilestoneMap, setExpandedMilestoneMap] = useState8(
+  const [phaseToggleCounts, setPhaseToggleCounts] = useState10({});
+  const [expandedMilestoneMap, setExpandedMilestoneMap] = useState10(
     {}
   );
-  const [expandedPhaseKey, setExpandedPhaseKey] = useState8(null);
-  const handleExpandMilestone = useCallback8((phaseKey, milestoneIndex) => {
+  const [expandedPhaseKey, setExpandedPhaseKey] = useState10(null);
+  const sortMilestones = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
+  const handleExpandMilestone = useCallback10((phaseKey, milestoneIndex) => {
     const k = String(phaseKey);
     setExpandedPhaseKey(null);
     setExpandedMilestoneMap((prev) => ({
@@ -3838,12 +4246,12 @@ function TimelineTwoColumn({
       [k]: prev[k] === milestoneIndex ? null : milestoneIndex
     }));
   }, []);
-  const handleExpandPhaseCard = useCallback8((phaseKey) => {
+  const handleExpandPhaseCard = useCallback10((phaseKey) => {
     setExpandedMilestoneMap({});
     setExpandedPhaseKey((prev) => prev === phaseKey ? null : phaseKey);
   }, []);
-  const stopCardPropagation = useCallback8((e) => e.stopPropagation(), []);
-  const handleTogglePhase = useCallback8(
+  const stopCardPropagation = useCallback10((e) => e.stopPropagation(), []);
+  const handleTogglePhase = useCallback10(
     (key) => {
       setPhaseToggleCounts((prev) => ({ ...prev, [String(key)]: (prev[String(key)] ?? 0) + 1 }));
       const next = !localPhaseDone[String(key)];
@@ -3852,7 +4260,7 @@ function TimelineTwoColumn({
     },
     [localPhaseDone, onTogglePhaseDone, setLocalPhaseDone, setPhaseToggleCounts]
   );
-  const handleToggleMilestone = useCallback8(
+  const handleToggleMilestone = useCallback10(
     (phaseKey, milestoneIndex) => {
       const k = `${phaseKey}-${milestoneIndex}`;
       const next = !localMilestoneDone[k];
@@ -3860,8 +4268,9 @@ function TimelineTwoColumn({
       setLocalMilestoneDone(updated);
       onToggleMilestoneDone?.(phaseKey, milestoneIndex, next);
       const phase = phases.find((p) => p.key === phaseKey);
-      if (phase?.milestones?.length) {
-        const allDone = phase.milestones.every((_, i) => updated[`${phaseKey}-${i}`] ?? false);
+      const sortedMilestones = phase?.milestones ? sortMilestones([...phase.milestones]) : [];
+      if (sortedMilestones.length > 0) {
+        const allDone = sortedMilestones.every((_, i) => updated[`${phaseKey}-${i}`] ?? false);
         const currentPhaseDone = localPhaseDone[String(phaseKey)] ?? false;
         if (allDone !== currentPhaseDone) {
           setPhaseToggleCounts((prev) => ({
@@ -3876,6 +4285,7 @@ function TimelineTwoColumn({
     [
       localMilestoneDone,
       phases,
+      sortMilestones,
       localPhaseDone,
       onToggleMilestoneDone,
       onTogglePhaseDone,
@@ -3884,30 +4294,32 @@ function TimelineTwoColumn({
       setPhaseToggleCounts
     ]
   );
-  const handleToggleTask = useCallback8(
-    (phaseKey, milestoneIdx, taskIdx) => {
-      const k = milestoneIdx !== null ? `${phaseKey}-m${milestoneIdx}-t${taskIdx}` : `${phaseKey}-t${taskIdx}`;
+  const handleToggleTask = useCallback10(
+    (phaseKey, childIdx, taskIdx) => {
+      const k = makeTaskStateKey(phaseKey, childIdx, taskIdx);
       const next = !(localTaskDoneMap[k] ?? false);
       const updated = { ...localTaskDoneMap, [k]: next };
       setLocalTaskDoneMap(updated);
-      onToggleTaskDone?.(phaseKey, milestoneIdx, taskIdx, next);
-      if (milestoneIdx !== null && checklist) {
+      onToggleTaskDone?.(phaseKey, childIdx, taskIdx, next);
+      if (childIdx !== null && checklist) {
         const phase = phases.find((p) => p.key === phaseKey);
-        const ms = phase?.milestones?.[milestoneIdx];
-        if (ms?.children?.length) {
-          const allTasksDone = ms.children.every(
-            (_, ti) => updated[`${phaseKey}-m${milestoneIdx}-t${ti}`] ?? false
+        const sortedMilestones = phase?.milestones ? sortMilestones([...phase.milestones]) : [];
+        const milestone = sortedMilestones[childIdx];
+        const milestoneTasks = milestone ? resolveTaskChildren(milestone) : [];
+        if (milestoneTasks.length > 0) {
+          const allTasksDone = milestoneTasks.every(
+            (_, ti) => updated[makeTaskStateKey(phaseKey, childIdx, ti)] ?? false
           );
-          const currentMsDone = localMilestoneDone[`${phaseKey}-${milestoneIdx}`] ?? false;
+          const currentMsDone = localMilestoneDone[`${phaseKey}-${childIdx}`] ?? false;
           if (allTasksDone !== currentMsDone) {
             const msUpdated = {
               ...localMilestoneDone,
-              [`${phaseKey}-${milestoneIdx}`]: allTasksDone
+              [`${phaseKey}-${childIdx}`]: allTasksDone
             };
             setLocalMilestoneDone(msUpdated);
-            onToggleMilestoneDone?.(phaseKey, milestoneIdx, allTasksDone);
-            if (phase?.milestones?.length) {
-              const allMsDone = phase.milestones.every(
+            onToggleMilestoneDone?.(phaseKey, childIdx, allTasksDone);
+            if (sortedMilestones.length > 0) {
+              const allMsDone = sortedMilestones.every(
                 (_, i) => msUpdated[`${phaseKey}-${i}`] ?? false
               );
               const currentPhaseDone = localPhaseDone[String(phaseKey)] ?? false;
@@ -3930,6 +4342,7 @@ function TimelineTwoColumn({
       onToggleTaskDone,
       checklist,
       phases,
+      sortMilestones,
       localMilestoneDone,
       setLocalMilestoneDone,
       onToggleMilestoneDone,
@@ -3938,26 +4351,25 @@ function TimelineTwoColumn({
       onTogglePhaseDone
     ]
   );
-  const today = useMemo4(() => {
+  const today = useMemo6(() => {
     const d = /* @__PURE__ */ new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   }, []);
-  const sortMilestones = sortOrder === "asc" ? sortMilestonesAsc : sortMilestonesDesc;
-  const sorted = useMemo4(
+  const sorted = useMemo6(
     () => sortPhasesByDate(phases, sortOrder).map((phase) => ({
       ...phase,
       milestones: phase.milestones ? sortMilestones(phase.milestones) : phase.milestones
     })),
     [phases, sortOrder, sortMilestones]
   );
-  const overlappingKeys = useMemo4(() => detectPhaseOverlaps(phases), [phases]);
+  const overlappingKeys = useMemo6(() => detectPhaseOverlaps(phases), [phases]);
   const lastKey = sorted.at(-1)?.key;
-  const anyExpanded = useMemo4(
+  const anyExpanded = useMemo6(
     () => expandedPhaseKey !== null || Object.values(expandedMilestoneMap).some((v) => v !== null),
     [expandedPhaseKey, expandedMilestoneMap]
   );
-  useEffect3(() => {
+  useEffect6(() => {
     if (!anyExpanded) return void 0;
     const handler = () => {
       setExpandedMilestoneMap({});
@@ -3966,8 +4378,8 @@ function TimelineTwoColumn({
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, [anyExpanded]);
-  const msHeightMapRef = useRef2({});
-  const [msSlotHeights, setMsSlotHeights] = useState8({});
+  const msHeightMapRef = useRef3({});
+  const [msSlotHeights, setMsSlotHeights] = useState10({});
   useIsomorphicLayoutEffect(() => {
     const result = computeSlotHeights(sorted, msHeightMapRef.current);
     setMsSlotHeights((prev) => {
@@ -3978,8 +4390,8 @@ function TimelineTwoColumn({
     });
   }, [sorted]);
   const effectiveViewedKeys = viewedKeys ?? EMPTY_VIEWED_KEYS;
-  return /* @__PURE__ */ jsxs23(Fragment3, { children: [
-    /* @__PURE__ */ jsx35(Box28, { sx: { display: { xs: "block", md: "none" } }, children: /* @__PURE__ */ jsx35(
+  return /* @__PURE__ */ jsxs24(Fragment4, { children: [
+    /* @__PURE__ */ jsx40(Box28, { sx: { display: { xs: "block", md: "none" } }, children: /* @__PURE__ */ jsx40(
       TimelineCompact,
       {
         phases,
@@ -3994,7 +4406,7 @@ function TimelineTwoColumn({
         ...other
       }
     ) }),
-    /* @__PURE__ */ jsx35(
+    /* @__PURE__ */ jsx40(
       Box28,
       {
         sx: [
@@ -4002,10 +4414,10 @@ function TimelineTwoColumn({
           ...Array.isArray(sx) ? sx : [sx]
         ],
         ...other,
-        children: /* @__PURE__ */ jsx35(Timeline, { sx: timelineRootSx, children: sorted.map((phase, i) => {
+        children: /* @__PURE__ */ jsx40(Timeline, { sx: timelineRootSx, children: sorted.map((phase, i) => {
           const { isDone, isOverdue, dotColor, yearLabelValue, phaseMilestones, isLastPhase } = resolvePhaseState(phase, i, sorted, lastKey, checklist, localPhaseDone, today);
           if (phase.variant === "marker") {
-            return /* @__PURE__ */ jsx35(
+            return /* @__PURE__ */ jsx40(
               MarkerRow,
               {
                 phase,
@@ -4029,7 +4441,7 @@ function TimelineTwoColumn({
           const expandedMiIdx = expandedMilestoneMap[String(phase.key)] ?? null;
           const isThisPhaseExpanded = expandedPhaseKey === phase.key;
           const phaseViewKey = `phase-${phase.key}`;
-          const phaseCardNode = /* @__PURE__ */ jsx35("div", { onClick: stopCardPropagation, children: /* @__PURE__ */ jsx35(
+          const phaseCardNode = /* @__PURE__ */ jsx40("div", { onClick: stopCardPropagation, children: /* @__PURE__ */ jsx40(
             PhaseCard,
             {
               phase,
@@ -4050,8 +4462,14 @@ function TimelineTwoColumn({
               allPhases: onPhasesChange ? phases : void 0,
               isExpanded: isThisPhaseExpanded,
               onRequestExpand: () => handleExpandPhaseCard(phase.key),
-              taskDoneStates: phase.children?.map(
-                (task, ti) => localTaskDoneMap[`${phase.key}-t${ti}`] ?? task.done ?? false
+              taskDoneStates: resolveTaskChildren(phase).reduce(
+                (acc, task, ti) => {
+                  const done = localTaskDoneMap[makeTaskStateKey(phase.key, null, ti)] ?? task.done ?? false;
+                  acc[String(task.key)] = done;
+                  acc[`idx-${ti}`] = done;
+                  return acc;
+                },
+                {}
               ),
               onToggleTask: (taskIdx, _done) => handleToggleTask(phase.key, null, taskIdx)
             }
@@ -4087,7 +4505,7 @@ function TimelineTwoColumn({
             yearLabelMarginBottom + 80
           ) : Math.max(milestoneSlotHeight, msSlotHeights[String(phase.key)] ?? 0)) : void 0;
           rows.push(
-            /* @__PURE__ */ jsx35(
+            /* @__PURE__ */ jsx40(
               PhaseRow,
               {
                 phase,
@@ -4112,7 +4530,7 @@ function TimelineTwoColumn({
           );
           phaseMilestones.forEach((ms, mi) => {
             rows.push(
-              /* @__PURE__ */ jsx35(
+              /* @__PURE__ */ jsx40(
                 MilestoneRow,
                 {
                   ms,
@@ -4125,7 +4543,7 @@ function TimelineTwoColumn({
               )
             );
           });
-          return /* @__PURE__ */ jsx35(
+          return /* @__PURE__ */ jsx40(
             Box28,
             {
               component: "li",
@@ -4158,26 +4576,26 @@ var iconActionBarRootSx = {
 };
 
 // src/components/action-bar/icon/icon-action-bar.defaults.tsx
-import { jsx as jsx36 } from "react/jsx-runtime";
+import { jsx as jsx41 } from "react/jsx-runtime";
 var DEFAULT_ICON_ACTIONS = [
-  { tooltip: "Edit", icon: /* @__PURE__ */ jsx36(GiselleIcon, { icon: "solar:pen-bold" }) },
-  { tooltip: "View", icon: /* @__PURE__ */ jsx36(GiselleIcon, { icon: "solar:eye-bold" }) },
+  { tooltip: "Edit", icon: /* @__PURE__ */ jsx41(GiselleIcon, { icon: "solar:pen-bold" }) },
+  { tooltip: "View", icon: /* @__PURE__ */ jsx41(GiselleIcon, { icon: "solar:eye-bold" }) },
   {
     tooltip: "Print",
-    icon: /* @__PURE__ */ jsx36(GiselleIcon, { icon: "solar:printer-minimalistic-bold" })
+    icon: /* @__PURE__ */ jsx41(GiselleIcon, { icon: "solar:printer-minimalistic-bold" })
   },
-  { tooltip: "Send", icon: /* @__PURE__ */ jsx36(GiselleIcon, { icon: "mdi:email" }) },
-  { tooltip: "Share", icon: /* @__PURE__ */ jsx36(GiselleIcon, { icon: "solar:share-bold" }) }
+  { tooltip: "Send", icon: /* @__PURE__ */ jsx41(GiselleIcon, { icon: "mdi:email" }) },
+  { tooltip: "Share", icon: /* @__PURE__ */ jsx41(GiselleIcon, { icon: "solar:share-bold" }) }
 ];
 
 // src/components/action-bar/icon/icon-action-bar.tsx
-import { jsx as jsx37 } from "react/jsx-runtime";
+import { jsx as jsx42 } from "react/jsx-runtime";
 function IconActionBar({
   actions = DEFAULT_ICON_ACTIONS,
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx37(Box29, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
+  return /* @__PURE__ */ jsx42(Box29, { sx: [iconActionBarRootSx, ...Array.isArray(sx) ? sx : [sx]], ...other, children: actions.map((item, index) => {
     const label = item["aria-label"] ?? item.tooltip;
     const buttonProps = {
       onClick: item.onClick,
@@ -4186,24 +4604,24 @@ function IconActionBar({
       ...item.component !== void 0 && { component: item.component },
       ...item.href !== void 0 && { href: item.href }
     };
-    return /* @__PURE__ */ jsx37(
+    return /* @__PURE__ */ jsx42(
       Tooltip8,
       {
         title: item.tooltip,
         placement: item.tooltipPlacement ?? "bottom",
-        children: /* @__PURE__ */ jsx37("span", { children: /* @__PURE__ */ jsx37(IconButton4, { ...buttonProps, children: item.icon }) })
+        children: /* @__PURE__ */ jsx42("span", { children: /* @__PURE__ */ jsx42(IconButton4, { ...buttonProps, children: item.icon }) })
       },
       `${item.tooltip}-${index}`
     );
   }) });
 }
 
-// src/components/layout/two-column-showcase-row/two-column-showcase-row.tsx
+// src/components/layout/showcase/row/two-column/two-column-showcase-row.tsx
 import Box30 from "@mui/material/Box";
-import Grid from "@mui/material/Grid";
+import Grid2 from "@mui/material/Grid";
 import Stack2 from "@mui/material/Stack";
 import Typography20 from "@mui/material/Typography";
-import { jsx as jsx38, jsxs as jsxs24 } from "react/jsx-runtime";
+import { jsx as jsx43, jsxs as jsxs25 } from "react/jsx-runtime";
 function TwoColumnShowcaseRow({
   text,
   controls,
@@ -4216,8 +4634,8 @@ function TwoColumnShowcaseRow({
 }) {
   const isVertical = orientation === "column" || orientation === "column-reverse";
   const itemSize = isVertical ? { xs: 12 } : { xs: 12, md: 6 };
-  return /* @__PURE__ */ jsxs24(
-    Grid,
+  return /* @__PURE__ */ jsxs25(
+    Grid2,
     {
       container: true,
       columnSpacing: isVertical ? 0 : { xs: 0, md: 6 },
@@ -4226,19 +4644,19 @@ function TwoColumnShowcaseRow({
       sx: [{}, ...Array.isArray(sx) ? sx : [sx]],
       ...other,
       children: [
-        text && /* @__PURE__ */ jsx38(Grid, { size: itemSize, children: /* @__PURE__ */ jsxs24(
+        text && /* @__PURE__ */ jsx43(Grid2, { size: itemSize, children: /* @__PURE__ */ jsxs25(
           Stack2,
           {
             spacing: 2,
             sx: [{ maxWidth: 520 }, ...Array.isArray(textSx) ? textSx : [textSx]],
             children: [
-              text.overline && /* @__PURE__ */ jsx38(Typography20, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
-              text.heading && /* @__PURE__ */ jsx38(Typography20, { variant: "h4", children: text.heading }),
-              text.description && /* @__PURE__ */ jsx38(Typography20, { variant: "body1", color: "text.secondary", children: text.description })
+              text.overline && /* @__PURE__ */ jsx43(Typography20, { variant: "overline", sx: { color: "text.secondary" }, children: text.overline }),
+              text.heading && /* @__PURE__ */ jsx43(Typography20, { variant: "h4", children: text.heading }),
+              text.description && /* @__PURE__ */ jsx43(Typography20, { variant: "body1", color: "text.secondary", children: text.description })
             ]
           }
         ) }),
-        /* @__PURE__ */ jsx38(Grid, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ jsx38(
+        /* @__PURE__ */ jsx43(Grid2, { size: itemSize, sx: { minWidth: 0 }, children: /* @__PURE__ */ jsx43(
           Stack2,
           {
             spacing: 2,
@@ -4246,7 +4664,7 @@ function TwoColumnShowcaseRow({
               { alignItems: controlsAlign, width: 1, minWidth: 0 },
               ...Array.isArray(controlsSx) ? controlsSx : [controlsSx]
             ],
-            children: /* @__PURE__ */ jsx38(Box30, { sx: { width: 1, minWidth: 0 }, children: controls })
+            children: /* @__PURE__ */ jsx43(Box30, { sx: { width: 1, minWidth: 0 }, children: controls })
           }
         ) })
       ]
@@ -4254,11 +4672,11 @@ function TwoColumnShowcaseRow({
   );
 }
 
-// src/components/layout/section-title/section-title.tsx
+// src/components/layout/section/title/section-title/section-title.tsx
 import Box32 from "@mui/material/Box";
 import Typography21 from "@mui/material/Typography";
 
-// src/components/layout/section-title/section-title.styles.ts
+// src/components/layout/section/title/section-title/section-title.styles.ts
 var txtGradientSpanSx = (theme) => ({
   opacity: 0.4,
   display: "inline-block",
@@ -4269,11 +4687,11 @@ var txtGradientSpanSx = (theme) => ({
   color: "transparent"
 });
 
-// src/components/layout/section-title/section-caption.tsx
+// src/components/layout/section/title/section-title/section-caption.tsx
 import Box31 from "@mui/material/Box";
-import { jsx as jsx39 } from "react/jsx-runtime";
+import { jsx as jsx44 } from "react/jsx-runtime";
 function SectionCaption({ title, sx, ...other }) {
-  return /* @__PURE__ */ jsx39(
+  return /* @__PURE__ */ jsx44(
     Box31,
     {
       component: "span",
@@ -4290,8 +4708,8 @@ function SectionCaption({ title, sx, ...other }) {
   );
 }
 
-// src/components/layout/section-title/section-title.tsx
-import { jsx as jsx40, jsxs as jsxs25 } from "react/jsx-runtime";
+// src/components/layout/section/title/section-title/section-title.tsx
+import { jsx as jsx45, jsxs as jsxs26 } from "react/jsx-runtime";
 function SectionTitle({
   sx,
   title,
@@ -4301,7 +4719,7 @@ function SectionTitle({
   description,
   ...other
 }) {
-  return /* @__PURE__ */ jsxs25(
+  return /* @__PURE__ */ jsxs26(
     Box32,
     {
       sx: [
@@ -4314,13 +4732,13 @@ function SectionTitle({
       ],
       ...other,
       children: [
-        caption && /* @__PURE__ */ jsx40(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
-        /* @__PURE__ */ jsxs25(Typography21, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
+        caption && /* @__PURE__ */ jsx45(SectionCaption, { title: caption, sx: slotProps?.caption?.sx }),
+        /* @__PURE__ */ jsxs26(Typography21, { component: "h2", variant: "h2", sx: slotProps?.title?.sx, children: [
           title,
           " ",
-          txtGradient && /* @__PURE__ */ jsx40(Box32, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
+          txtGradient && /* @__PURE__ */ jsx45(Box32, { component: "span", sx: txtGradientSpanSx, children: txtGradient })
         ] }),
-        description && /* @__PURE__ */ jsx40(
+        description && /* @__PURE__ */ jsx45(
           Box32,
           {
             sx: [
@@ -4336,9 +4754,18 @@ function SectionTitle({
 }
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.tsx
-import { useCallback as useCallback10 } from "react";
+import { useCallback as useCallback12 } from "react";
 import { AnimatePresence } from "framer-motion";
 import Box33 from "@mui/material/Box";
+
+// src/components/nav/floating-sub-nav/floating-sub-nav.const.ts
+var SUB_NAV_BUTTON_SIZE = {
+  xs: 36,
+  sm: 38,
+  md: 42,
+  lg: 44
+};
+var PILL_BUTTON_ROW_SPACING = 0.5;
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.styles.ts
 var grey500Ch = (theme) => theme.vars.palette.grey["500Channel"];
@@ -4384,8 +4811,8 @@ var subNavButtonSx = (isActive) => (theme) => ({
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  width: { xs: 36, sm: 38, md: 42, lg: 44 },
-  height: { xs: 36, sm: 38, md: 42, lg: 44 },
+  width: SUB_NAV_BUTTON_SIZE,
+  height: SUB_NAV_BUTTON_SIZE,
   p: 0,
   borderRadius: 1.5,
   border: `solid 1px transparent`,
@@ -4427,14 +4854,27 @@ var subNavButtonSx = (isActive) => (theme) => ({
 import { motion } from "framer-motion";
 import Stack3 from "@mui/material/Stack";
 
+// src/components/nav/floating-sub-nav/floating-sub-nav.animations.ts
+var PILL_EASING = [0.4, 0, 0.2, 1];
+var PILL_TRANSITION_DURATION = 0.28;
+var pillTransition = {
+  duration: PILL_TRANSITION_DURATION,
+  ease: PILL_EASING
+};
+var pillVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 10 }
+};
+
 // src/components/nav/floating-sub-nav/sub-nav-button.tsx
-import { useCallback as useCallback9 } from "react";
+import { useCallback as useCallback11 } from "react";
 import Tooltip9 from "@mui/material/Tooltip";
 import ButtonBase2 from "@mui/material/ButtonBase";
-import { jsx as jsx41 } from "react/jsx-runtime";
+import { jsx as jsx46 } from "react/jsx-runtime";
 function SubNavButton({ item, isActive, onPress }) {
-  const handleClick = useCallback9(() => onPress(item.id), [onPress, item.id]);
-  return /* @__PURE__ */ jsx41(Tooltip9, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ jsx41(
+  const handleClick = useCallback11(() => onPress(item.id), [onPress, item.id]);
+  return /* @__PURE__ */ jsx46(Tooltip9, { title: item.label, placement: "top", arrow: true, children: /* @__PURE__ */ jsx46(
     ButtonBase2,
     {
       disableRipple: true,
@@ -4450,24 +4890,25 @@ function SubNavButton({ item, isActive, onPress }) {
 }
 
 // src/components/nav/floating-sub-nav/nav-pill.tsx
-import { jsx as jsx42 } from "react/jsx-runtime";
+import { jsx as jsx47 } from "react/jsx-runtime";
 function NavPill({ items, activeId, onPress }) {
-  return /* @__PURE__ */ jsx42(
+  return /* @__PURE__ */ jsx47(
     motion.div,
     {
-      initial: { opacity: 0, y: 20 },
-      animate: { opacity: 1, y: 0 },
-      exit: { opacity: 0, y: 10 },
-      transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
-      children: /* @__PURE__ */ jsx42(
+      variants: pillVariants,
+      initial: "initial",
+      animate: "animate",
+      exit: "exit",
+      transition: pillTransition,
+      children: /* @__PURE__ */ jsx47(
         Stack3,
         {
+          component: "nav",
           direction: "column",
           alignItems: "center",
-          role: "navigation",
           "aria-label": "Section navigation",
           sx: pillSx,
-          children: /* @__PURE__ */ jsx42(Stack3, { direction: "row", spacing: 0.5, children: items.map((item) => /* @__PURE__ */ jsx42(
+          children: /* @__PURE__ */ jsx47(Stack3, { direction: "row", spacing: PILL_BUTTON_ROW_SPACING, children: items.map((item) => /* @__PURE__ */ jsx47(
             SubNavButton,
             {
               item,
@@ -4483,18 +4924,18 @@ function NavPill({ items, activeId, onPress }) {
 }
 
 // src/components/nav/floating-sub-nav/floating-sub-nav.tsx
-import { jsx as jsx43 } from "react/jsx-runtime";
+import { jsx as jsx48 } from "react/jsx-runtime";
 function FloatingSubNav({ items, activeId, onSelect, sticky = false }) {
-  const handlePress = useCallback10((id) => onSelect(id), [onSelect]);
+  const handlePress = useCallback12((id) => onSelect(id), [onSelect]);
   if (sticky) {
-    return /* @__PURE__ */ jsx43(Box33, { sx: stickyWrapperSx, children: /* @__PURE__ */ jsx43(Box33, { sx: stickyInnerSx, children: /* @__PURE__ */ jsx43(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx43(NavPill, { items, activeId, onPress: handlePress }) }) }) });
+    return /* @__PURE__ */ jsx48(Box33, { sx: stickyWrapperSx, children: /* @__PURE__ */ jsx48(Box33, { sx: stickyInnerSx, children: /* @__PURE__ */ jsx48(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx48(NavPill, { items, activeId, onPress: handlePress }) }) }) });
   }
-  return /* @__PURE__ */ jsx43(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx43(Box33, { sx: fixedWrapperSx, children: /* @__PURE__ */ jsx43(NavPill, { items, activeId, onPress: handlePress }) }) });
+  return /* @__PURE__ */ jsx48(AnimatePresence, { children: activeId !== null && /* @__PURE__ */ jsx48(Box33, { sx: fixedWrapperSx, children: /* @__PURE__ */ jsx48(NavPill, { items, activeId, onPress: handlePress }) }) });
 }
 
-// src/components/layout/section-container/section-container.tsx
+// src/components/layout/section/container/section-container.tsx
 import Container from "@mui/material/Container";
-import { jsx as jsx44 } from "react/jsx-runtime";
+import { jsx as jsx49 } from "react/jsx-runtime";
 function SectionContainer({
   children,
   maxWidth = "lg",
@@ -4502,7 +4943,50 @@ function SectionContainer({
   sx,
   ...other
 }) {
-  return /* @__PURE__ */ jsx44(Container, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
+  return /* @__PURE__ */ jsx49(Container, { maxWidth, sx: [{ py }, ...Array.isArray(sx) ? sx : [sx]], ...other, children });
+}
+
+// src/components/layout/section/hero/hero-section.tsx
+import Box34 from "@mui/material/Box";
+import Container2 from "@mui/material/Container";
+
+// src/components/layout/section/hero/hero-section.styles.ts
+var heroRootSx = (color) => (theme) => ({
+  width: "100%",
+  backgroundColor: channelAlpha(theme.vars.palette[color].mainChannel, 0.08)
+});
+var heroInnerSx = {
+  py: { xs: 10, md: 14 },
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  textAlign: "center",
+  gap: 3
+};
+var heroActionsRowSx = {
+  display: "flex",
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "center",
+  gap: 2,
+  mt: 1
+};
+
+// src/components/layout/section/hero/hero-section.tsx
+import { jsx as jsx50, jsxs as jsxs27 } from "react/jsx-runtime";
+function HeroSection({
+  headline,
+  subtitle,
+  actions,
+  color = "primary",
+  sx,
+  ...other
+}) {
+  return /* @__PURE__ */ jsx50(Box34, { sx: [heroRootSx(color), ...Array.isArray(sx) ? sx : [sx]], ...other, children: /* @__PURE__ */ jsxs27(Container2, { maxWidth: "lg", sx: heroInnerSx, children: [
+    headline,
+    subtitle,
+    actions && /* @__PURE__ */ jsx50(Box34, { sx: heroActionsRowSx, children: actions })
+  ] }) });
 }
 
 // src/utils/maturity-utils.ts
@@ -4534,151 +5018,115 @@ function assignMilestoneSidesByDone(phases) {
   }));
 }
 
-// src/components/chart/radial-progress/radial-progress-card.tsx
-import { lazy, Suspense, useMemo as useMemo5 } from "react";
-import Card2 from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
-import CardHeader from "@mui/material/CardHeader";
-import Divider3 from "@mui/material/Divider";
-import Box34 from "@mui/material/Box";
-import Typography22 from "@mui/material/Typography";
-import { useTheme } from "@mui/material/styles";
+// src/components/animated-gradient-text/animated-gradient-text.tsx
+import Box35 from "@mui/material/Box";
 
-// src/components/chart/radial-progress/radial-progress-card.styles.ts
-function buildRadialProgressOptions(theme, labels, colors, total, totalLabel) {
-  const textSecondary = theme.vars?.palette.text.secondary ?? theme.palette.text.secondary;
-  const textPrimary = theme.vars?.palette.text.primary ?? theme.palette.text.primary;
-  const trackBg = theme.vars?.palette.grey[200] ?? theme.palette.grey[200];
-  return {
-    chart: {
-      type: "radialBar",
-      sparkline: { enabled: true }
-    },
-    colors,
-    labels,
-    stroke: { lineCap: "round" },
-    fill: { type: "solid" },
-    grid: { padding: { top: -20, bottom: -20 } },
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 10,
-          size: "40%"
-        },
-        track: {
-          margin: 10,
-          background: trackBg,
-          strokeWidth: "100%"
-        },
-        dataLabels: {
-          total: {
-            show: true,
-            label: totalLabel,
-            color: textSecondary,
-            fontSize: "13px",
-            fontWeight: 400,
-            formatter: () => `${total}`
-          },
-          value: {
-            offsetY: 2,
-            color: textPrimary,
-            fontSize: "15px",
-            fontWeight: 700,
-            formatter: (val) => `${Math.round(val)}%`
-          },
-          name: {
-            offsetY: -10,
-            fontSize: "11px",
-            color: textSecondary
-          }
-        }
-      }
-    }
-  };
-}
-var chartWrapSx = {
-  mx: "auto",
-  overflow: "hidden"
-};
-var legendRowSx = {
-  display: "flex",
-  flexWrap: "wrap",
-  justifyContent: "center",
-  gap: 2,
-  mt: 1
-};
-var legendItemSx = {
-  display: "flex",
-  alignItems: "center",
-  gap: 0.75
-};
-var legendValueSx = {
-  color: "text.secondary",
-  ml: 0.5
-};
-var LEGEND_DOT_SIZE = 12;
-var legendDotSx = (color) => ({
-  width: LEGEND_DOT_SIZE,
-  height: LEGEND_DOT_SIZE,
-  borderRadius: "50%",
-  bgcolor: color,
-  flexShrink: 0
+// src/components/animated-gradient-text/animated-gradient-text.const.ts
+var ANIMATED_GRADIENT_DEFAULT_COLOR1 = "primary";
+var ANIMATED_GRADIENT_DEFAULT_COLOR2 = "secondary";
+var ANIMATED_GRADIENT_DEFAULT_DURATION = 3;
+
+// src/components/animated-gradient-text/animated-gradient-text.styles.ts
+var gradientTextSx = (color1, color2, duration) => ({
+  background: `linear-gradient(135deg, var(--mui-palette-${color1}-main), var(--mui-palette-${color2}-main), var(--mui-palette-${color1}-main))`,
+  backgroundSize: "200% 200%",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+  display: "inline-block",
+  animation: `animatedGradientText ${duration}s ease infinite`,
+  "@keyframes animatedGradientText": {
+    "0%": { backgroundPosition: "0% 50%" },
+    "50%": { backgroundPosition: "100% 50%" },
+    "100%": { backgroundPosition: "0% 50%" }
+  }
 });
 
-// src/components/chart/radial-progress/radial-progress-card.tsx
-import { jsx as jsx45, jsxs as jsxs26 } from "react/jsx-runtime";
-var ReactApexChart = lazy(() => import("react-apexcharts"));
-function RadialProgressCard({
-  title,
-  subheader,
-  total,
-  totalLabel = "%",
-  chartHeight = 280,
-  series,
+// src/components/animated-gradient-text/animated-gradient-text.tsx
+import { jsx as jsx51 } from "react/jsx-runtime";
+function AnimatedGradientText({
+  children,
+  color1 = ANIMATED_GRADIENT_DEFAULT_COLOR1,
+  color2 = ANIMATED_GRADIENT_DEFAULT_COLOR2,
+  duration = ANIMATED_GRADIENT_DEFAULT_DURATION,
+  component = "span",
   sx,
   ...other
 }) {
-  const theme = useTheme();
-  const resolvedColors = useMemo5(
-    () => series.map((item) => theme.palette[item.color].main),
-    [series, theme]
+  return /* @__PURE__ */ jsx51(
+    Box35,
+    {
+      component,
+      sx: [gradientTextSx(color1, color2, duration), ...Array.isArray(sx) ? sx : [sx]],
+      ...other,
+      children
+    }
   );
-  const chartSeries = useMemo5(() => series.map((s) => s.value), [series]);
-  const chartLabels = useMemo5(() => series.map((s) => s.label), [series]);
-  const chartOptions = useMemo5(
-    () => buildRadialProgressOptions(theme, chartLabels, resolvedColors, total, totalLabel),
-    [theme, chartLabels, resolvedColors, total, totalLabel]
-  );
-  return /* @__PURE__ */ jsxs26(Card2, { sx: [{}, ...Array.isArray(sx) ? sx : [sx]], ...other, children: [
-    (title !== void 0 || subheader !== void 0) && /* @__PURE__ */ jsx45(CardHeader, { title, subheader }),
-    /* @__PURE__ */ jsxs26(CardContent, { children: [
-      /* @__PURE__ */ jsx45(Box34, { sx: chartWrapSx, children: /* @__PURE__ */ jsx45(Suspense, { fallback: /* @__PURE__ */ jsx45(Box34, { sx: { height: chartHeight } }), children: /* @__PURE__ */ jsx45(
-        ReactApexChart,
-        {
-          type: "radialBar",
-          series: chartSeries,
-          options: chartOptions,
-          width: "100%",
-          height: chartHeight
-        }
-      ) }) }),
-      /* @__PURE__ */ jsx45(Divider3, { sx: { my: 2 } }),
-      /* @__PURE__ */ jsx45(Box34, { sx: legendRowSx, children: series.map((item, i) => /* @__PURE__ */ jsxs26(Box34, { sx: legendItemSx, children: [
-        /* @__PURE__ */ jsx45(Box34, { sx: legendDotSx(resolvedColors[i] ?? theme.palette.primary.main) }),
-        /* @__PURE__ */ jsx45(Typography22, { variant: "subtitle2", children: item.label }),
-        /* @__PURE__ */ jsxs26(Typography22, { variant: "caption", sx: legendValueSx, children: [
-          item.value,
-          "%"
-        ] })
-      ] }, item.label)) })
-    ] })
+}
+
+// src/components/tech-icon-strip/tech-icon-strip.tsx
+import Box36 from "@mui/material/Box";
+import Typography22 from "@mui/material/Typography";
+
+// src/components/tech-icon-strip/tech-icon-strip.const.ts
+var TECH_ICON_STRIP_ICON_SIZE = 32;
+var TECH_ICON_STRIP_LABEL_FONT_SIZE = "0.75rem";
+
+// src/components/tech-icon-strip/tech-icon-strip.styles.ts
+var titleSx = {
+  display: "block",
+  mb: 2,
+  color: "text.secondary",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase"
+};
+var stripWrapperSx = (centered) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 3,
+  justifyContent: centered ? "center" : "flex-start",
+  alignItems: "flex-start"
+});
+var itemSx = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 0.5,
+  minWidth: 56
+};
+var iconSlotSx = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  "& svg": {
+    width: TECH_ICON_STRIP_ICON_SIZE,
+    height: TECH_ICON_STRIP_ICON_SIZE
+  }
+};
+
+// src/components/tech-icon-strip/tech-icon-strip.tsx
+import { jsx as jsx52, jsxs as jsxs28 } from "react/jsx-runtime";
+function TechIconStrip({
+  items,
+  title,
+  centeredWrap = false,
+  sx,
+  ...other
+}) {
+  return /* @__PURE__ */ jsxs28(Box36, { sx: [...Array.isArray(sx) ? sx : [sx]], ...other, children: [
+    title && /* @__PURE__ */ jsx52(Typography22, { component: "span", sx: titleSx, variant: "overline", children: title }),
+    /* @__PURE__ */ jsx52(Box36, { sx: stripWrapperSx(centeredWrap), children: items.map((item) => /* @__PURE__ */ jsxs28(Box36, { sx: itemSx, children: [
+      /* @__PURE__ */ jsx52(Box36, { "aria-hidden": true, sx: iconSlotSx, children: item.icon }),
+      /* @__PURE__ */ jsx52(Typography22, { sx: { fontSize: TECH_ICON_STRIP_LABEL_FONT_SIZE }, variant: "caption", children: item.label })
+    ] }, item.label)) })
   ] });
 }
 export {
-  ACCORDION_CHECK_ICON_SIZE,
+  TOGGLE_ICON_SIZE as ACCORDION_CHECK_ICON_SIZE,
   ACCORDION_DONE_MIN_TOUCH_TARGET,
-  ACCORDION_ICON_BUTTON_MIN_SIZE,
+  TOGGLE_MIN_TOUCH_TARGET as ACCORDION_ICON_BUTTON_MIN_SIZE,
   Accordion,
+  AnimatedGradientText,
   COMPACT_MILESTONE_DOT_SIZE,
   COMPACT_MIN_MILESTONE_DOT_SIZE,
   COMPACT_MIN_PHASE_DOT_SIZE,
@@ -4690,34 +5138,49 @@ export {
   GISELLE_PRIMARY_MAIN,
   GISELLE_SECONDARY_MAIN,
   GiselleIcon,
+  GiselleSettingsProvider,
+  GiselleThemeAndSettingsProvider,
+  GiselleThemeProvider,
+  HeroSection,
   IconActionBar,
   MetricCard,
   MetricCardDecoration,
+  MilestoneBadge,
   PhaseCard,
   QuoteCard,
-  RadialProgressCard,
   STAT_CARD_SPARKLINE_OPTIONS,
   SectionCaption,
   SectionContainer,
   SectionTitle,
   SelectableCard,
   StatCard,
+  StatCardRow,
+  TOGGLE_ICON_SIZE,
+  TOGGLE_MIN_TOUCH_TARGET,
   TaskDetailsRenderer,
   TaskList,
+  TechIconStrip,
   TimelineCompact,
   TimelineDot,
   TimelineTwoColumn,
+  ToggleIconButton,
   TwoColumnShowcaseRow,
   assignMilestoneSidesByDone,
   channelAlpha,
   createIconRegistrar,
+  getCookieValue,
   giselleTheme,
+  giselleThemeOptions,
   hexToChannel,
+  isDeepEqual,
   pxToRem,
   remToPx,
   resolveCompactColor,
   resolveMaturityColor,
   resolveMaturityLabel,
+  setCookieValue,
+  useGiselleSettings,
+  useLocalStorage,
   useNestedChecklist
 };
 //# sourceMappingURL=index.js.map

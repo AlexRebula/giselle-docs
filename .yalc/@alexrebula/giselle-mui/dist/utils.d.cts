@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { TimelineDotProps } from '@mui/lab/TimelineDot';
 import * as _mui_material_styles from '@mui/material/styles';
+import { CssVarsThemeOptions } from '@mui/material/styles';
 
 /**
  * Theme utility helpers for MUI v7 CSS Variables mode.
@@ -92,6 +93,41 @@ declare function pxToRem(px: number): string;
  */
 declare function remToPx(rem: number): number;
 
+/**
+ * Recursive deep equality check for plain values.
+ *
+ * Covers the full set of value types produced by `GiselleSettingsProvider` state:
+ * - Primitives: `string`, `number`, `boolean`, `null`, `undefined`
+ * - Plain arrays (element-by-element comparison)
+ * - Plain objects (own enumerable key comparison, recursive)
+ *
+ * Out of scope (not needed for settings state): `Date`, `Map`, `Set`, `RegExp`,
+ * `Symbol`, class instances. If passed, these are compared by reference only.
+ */
+declare function isDeepEqual(a: unknown, b: unknown): boolean;
+
+type SetCookieOptions = {
+    /** Max age in seconds. */
+    maxAge?: number;
+    /** Cookie path. @default '/' */
+    path?: string;
+    /** SameSite policy. @default 'Lax' */
+    sameSite?: 'Strict' | 'Lax' | 'None';
+};
+/**
+ * Reads a cookie value by name.
+ *
+ * SSR-safe: returns `null` when called outside a browser context
+ * (`typeof document === 'undefined'`).
+ */
+declare function getCookieValue(name: string): string | null;
+/**
+ * Writes a cookie value.
+ *
+ * SSR-safe: no-op when called outside a browser context.
+ */
+declare function setCookieValue(name: string, value: string, options?: SetCookieOptions): void;
+
 type StatCardColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
 
 /**
@@ -146,18 +182,12 @@ interface TaskDetails {
  * Base unit for any trackable work item in the timeline.
  *
  * `TimelinePhase`, `TimelineMilestone`, and every nested sub-task all share this shape.
- * Having a common base makes parent-child done-state propagation computable at any depth:
+ * The shared base keeps phase/milestone/task shapes consistent for done-state propagation.
  *
  * - All `children` done → parent can be auto-marked done.
  * - Any `children` un-done → parent reverts to not-done.
- * - Nesting is unbounded: a `Task` child can itself have `children`.
- *
- * ```
- * TimelinePhase (extends Task)
- *   └─ children / milestones: Task[]
- *        └─ children: Task[]
- *             └─ children: Task[]   ← infinite depth
- * ```
+ * - Current timeline UI/callback plumbing is position-based and supports one visible
+ *   nested `children` level for interactive toggling.
  */
 type Task = {
     /** Stable identifier for this work item. */
@@ -179,10 +209,13 @@ type Task = {
     /** Optional rich details rendered in a modal or drawer. */
     details?: TaskDetails;
     /**
-     * Nested sub-tasks. Can be nested to any depth.
+     * Nested sub-tasks.
+     *
+     * Data may include deeper nesting, but current timeline rendering/toggle callbacks
+     * operate on one visible nested level.
      *
      * Replaces the legacy flat `details: string[]` field. Migrate data files by converting
-     * each string to `{ title: string }`. Add `done?` and further `children?` as needed.
+     * each string to `{ title: string }`.
      */
     children?: Task[];
 };
@@ -329,7 +362,7 @@ type TimelinePhase = Task & {
      */
     platformsLabel?: string;
     /**
-     * 'scenario' — coloured left border + badge label (used in case-001 for departure scenarios).
+     * 'scenario' — coloured left border + badge label (used for scheduling scenarios with multiple options).
      * 'life-event' — coloured left border + tinted background (used in career timeline).
      * 'marker' — spine-only: dot + floating label, no card. For single point-in-time events
      *             that don't warrant a full phase card (e.g. a certification date, a visa grant).
@@ -457,17 +490,6 @@ type TimelinePhase = Task & {
 declare function assignMilestoneSidesByDone(phases: TimelinePhase[]): TimelinePhase[];
 
 /**
- * Giselle brand theme preset for MUI v7 CSS Variables mode.
- *
- * Defines the Giselle ecosystem's default palette as a ready-to-use
- * `extendTheme()` result. Pass directly to `ThemeProvider` or use the
- * zero-config `GiselleThemeProvider` wrapper (Phase C).
- *
- * **Brand palette — the Carabao mango tree:**
- * - Primary   — Deep grove green `#2E7D32` (Lime `#76C442` in dark mode)
- * - Secondary — Mango gold `#F5A623`
- */
-/**
  * Giselle brand primary colour — Deep grove green `#2E7D32`.
  *
  * Used as the light-mode primary. Achieves 4.76:1 contrast against white —
@@ -488,6 +510,14 @@ declare const GISELLE_PRIMARY_DARK_MAIN = "#76C442";
  */
 declare const GISELLE_SECONDARY_MAIN = "#F5A623";
 /**
+ * The Giselle brand theme options — the raw input to `extendTheme()`.
+ *
+ * Use this constant when you need to deep-merge Giselle palette defaults
+ * with consumer overrides before resolving the final theme. Prefer
+ * `giselleTheme` when you only need the already-resolved theme object.
+ */
+declare const giselleThemeOptions: CssVarsThemeOptions;
+/**
  * The Giselle brand theme preset.
  *
  * A ready-to-use result of `extendTheme()` carrying the full Giselle palette
@@ -503,7 +533,7 @@ declare const GISELLE_SECONDARY_MAIN = "#F5A623";
  * </ThemeProvider>
  * ```
  *
- * **Usage — via `GiselleThemeProvider` (Phase C, zero-config):**
+ * **Usage — via `GiselleThemeProvider` (zero-config):**
  * ```tsx
  * import { GiselleThemeProvider } from '@alexrebula/giselle-mui';
  *
@@ -522,4 +552,26 @@ declare const GISELLE_SECONDARY_MAIN = "#F5A623";
  */
 declare const giselleTheme: Omit<_mui_material_styles.Theme, "applyStyles"> & _mui_material_styles.CssVarsTheme;
 
-export { GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, assignMilestoneSidesByDone, channelAlpha, giselleTheme, hexToChannel, pxToRem, remToPx, resolveMaturityColor, resolveMaturityLabel };
+/**
+ * Registers images for browser preloading using React's built-in `preload` hint.
+ *
+ * Call this with every image URL a component may ever render. React emits
+ * `<link rel="preload" as="image">` tags in the SSR HTML (before the
+ * component markup) and deduplicates identical URLs automatically, so there
+ * is no flicker on first paint — including on initial server-rendered load.
+ *
+ * Must be called during render (not inside `useEffect` or event handlers) so
+ * the preload hints are included in the SSR response.
+ *
+ * Pass `highPrioritySrc` for the image that is immediately visible on first
+ * render. It receives `fetchPriority: 'high'` so the browser fetches it
+ * before all other preloaded images, preventing sporadic first-paint flicker.
+ *
+ * @example
+ * ```tsx
+ * useImagePreloader(allPortraitSrcs, firstPortraitSrc);
+ * ```
+ */
+declare function useImagePreloader(srcs: readonly string[], highPrioritySrc?: string): void;
+
+export { GISELLE_PRIMARY_DARK_MAIN, GISELLE_PRIMARY_MAIN, GISELLE_SECONDARY_MAIN, type SetCookieOptions, assignMilestoneSidesByDone, channelAlpha, getCookieValue, giselleTheme, giselleThemeOptions, hexToChannel, isDeepEqual, pxToRem, remToPx, resolveMaturityColor, resolveMaturityLabel, setCookieValue, useImagePreloader };
