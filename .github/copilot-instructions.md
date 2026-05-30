@@ -6,6 +6,7 @@ Built with [Docusaurus](https://docusaurus.io/). MIT licensed.
 ## What this site is
 
 A single Docusaurus instance that pulls documentation from three sibling package repos:
+
 - `giselle-mui` — MUI wrapper component library
 - `giselle-sections-sdk` — framework-agnostic data SDK
 - `giselle-ui` — standalone CSS-custom-properties component library
@@ -18,6 +19,15 @@ No personal content. No proprietary code. No imports from the `alexrebula` priva
 - TypeScript (strict)
 - React (via Docusaurus)
 - Vercel for deployment
+
+## Cross-agent behavior guardrails (Karpathy baseline)
+
+Apply these defaults on every task unless a stricter repo rule overrides them.
+
+1. **Think before coding.** State assumptions. If multiple interpretations exist, present them and ask when uncertain.
+2. **Simplicity first.** Implement the minimum solution that satisfies the request. Do not add speculative abstraction, configurability, or extra features.
+3. **Surgical changes.** Touch only what is required for the request. Avoid unrelated refactors, formatting drift, or drive-by cleanup.
+4. **Goal-driven execution.** Define verifiable success criteria and close the loop with checks (tests, lint, typecheck, or explicit validation).
 
 ## Brand identity — the Giselle mango tree
 
