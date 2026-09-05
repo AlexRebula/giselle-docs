@@ -1,0 +1,9 @@
+{
+  "version": "v1",
+  "packages": {
+    "@alexrebula/giselle-mui": {
+      "signature": "caa0b5b284c6f0168f065cbef190d557",
+      "file": true
+    }
+  }
+}
