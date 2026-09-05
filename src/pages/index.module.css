@@ -1,23 +1,78 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
 .heroBanner {
-  padding: 4rem 0;
+  padding: 5rem 0;
   text-align: center;
-  position: relative;
-  overflow: hidden;
 }
 
 @media screen and (max-width: 996px) {
   .heroBanner {
-    padding: 2rem;
+    padding: 3rem 1rem;
   }
 }
 
-.buttons {
+/* WC-6 placeholder — styled to match the planned dark grove brand palette.
+   Replace the contents of this block with <img src="/img/wc-6-hero.png" alt="..." />
+   once the watercolour illustration is generated from the Firefly prompt. */
+.heroIllustrationPlaceholder {
+  margin: 2.5rem auto 0;
+  width: 90%;
+  max-width: 960px;
+  height: 220px;
+  border-radius: 12px;
+  background-color: #1a2b1a;
+  border: 2px dashed #f5a623;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.heroIllustrationLabel {
+  font-size: 0.85rem;
+  color: #f5a623;
+  opacity: 0.7;
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.packages {
+  padding: 3rem 0 4rem;
+}
+
+.packageCol {
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.cardBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ifm-color-primary-dark);
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  margin-bottom: 0;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.cardDescription {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 0.5rem;
 }
